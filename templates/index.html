@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Combine AI Profile</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; }
+        .video-container { margin: 20px auto; border: 4px solid #333; border-radius: 10px; width: 640px; height: 480px; overflow: hidden; background: #000; }
+        button { background: #e50914; color: white; border: none; padding: 10px 20px; font-size: 16px; margin: 10px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        button:hover { background: #ff1e27; }
+        .action-btn { background: #4caf50; }
+        .action-btn:hover { background: #45a049; }
+        .stats-card { background: #1a1a1a; padding: 20px; margin: 20px auto; width: 50%; border-radius: 10px; border: 1px solid #444; display: none; }
+        .aura-tag { color: #00ffcc; font-weight: bold; text-transform: uppercase; }
+        .status-bar { margin: 10px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>Scouting Combine AI 🧬</h1>
+    <p>Perform the tests. Farm your aura. Get drafted.</p>
+
+    <div>
+        <button onclick="setMode('high_knees')">1. Start 10s High Knees</button>
+        <button onclick="setMode('squat')">2. Start Squat Test</button>
+    </div>
+
+    <div class="video-container">
+        <img src="/video_feed" width="640" height="480" />
+    </div>
+
+    <div>
+        <button class="action-btn" onclick="saveCurrentScore()">Save Current Score</button>
+        <button class="action-btn" onclick="generateProfile()" style="background: #2196F3;">Generate Scout Profile</button>
+    </div>
+    
+    <div class="status-bar" id="system-status">System Ready...</div>
+
+    <div class="stats-card" id="profileCard">
+        <h2>Official Scout Report</h2>
+        <p><strong>Recommended Sport:</strong> <span class="aura-tag" id="sportRec"></span></p>
+        <p><strong>Top Traits:</strong> <span id="traits"></span></p>
+        <hr style="border-color: #333;">
+        <p>High Knee Reps (10s): <span id="runStat" class="aura-tag"></span></p>
+        <p>Squat Reps: <span id="squatStat" class="aura-tag"></span></p>
+        <p style="font-size: 0.8em; color: #888; margin-top: 20px;">Screenshot this and send to your coach.</p>
+    </div>
+
+    <script>
+        function setMode(mode) {
+            fetch('/set_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode: mode})
+            });
+            document.getElementById('system-status').innerText = "Switched to: " + mode.replace('_', ' ').toUpperCase();
+        }
+
+        function saveCurrentScore() {
+            fetch('/save_score', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('system-status').innerText = "Score saved successfully!";
+            });
+        }
+
+        function generateProfile() {
+            fetch('/generate_profile')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('profileCard').style.display = 'block';
+                document.getElementById('sportRec').innerText = data.sport;
+                document.getElementById('traits').innerText = data.skills.join(' | ');
+                document.getElementById('runStat').innerText = data.run_stat;
+                document.getElementById('squatStat').innerText = data.squat_stat;
+            });
+        }
+    </script>
+</body>
+</html>
