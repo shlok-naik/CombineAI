@@ -1,4 +1,4 @@
-# Sports-Profile
+# CombineAI
 
 ## How to Run (Optional Live Demo for Project)
 ### Version
