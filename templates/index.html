@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght=500;600;700&family=Inter:wght=400;500;600&family=JetBrains+Mono:wght=500;600&display=swap" rel="stylesheet">
 <style>
-  :root{
+  :root {
     --bg: #0b0e14;
     --panel: #12161f;
     --panel-border: #232838;
@@ -19,9 +19,9 @@
     --radius: 14px;
   }
 
-  *{ box-sizing: border-box; }
+  * { box-sizing: border-box; }
 
-  body{
+  body {
     margin: 0;
     background:
       radial-gradient(1200px 600px at 15% -10%, rgba(242,169,59,0.08), transparent 60%),
@@ -32,210 +32,166 @@
     min-height: 100vh;
   }
 
-  .app{ max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+  .app { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
 
-  .ticker{
+  /* Ticker */
+  .ticker {
     position: relative; overflow: hidden; width: 100%;
     background: var(--panel); border: 1px solid var(--panel-border); border-radius: 999px;
     margin-bottom: 20px; padding: 10px 0;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
     mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   }
-  .ticker-track{
-    display: flex; width: max-content;
-    animation: ticker-scroll 26s linear infinite;
-  }
-  .ticker-track:hover{ animation-play-state: paused; }
-  .ticker-item{
+  .ticker-track { display: flex; width: max-content; animation: ticker-scroll 26s linear infinite; }
+  .ticker-track:hover { animation-play-state: paused; }
+  .ticker-item {
     display: flex; align-items: center; gap: 10px;
-    font-family:'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.5px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.5px;
     color: var(--cyan); text-transform: uppercase; white-space: nowrap; padding: 0 22px;
   }
-  .ticker-item .dot{ width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
-  @keyframes ticker-scroll{
-    from{ transform: translateX(0); }
-    to{ transform: translateX(-50%); }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .ticker-track{ animation: none; }
-  }
+  .ticker-item .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+  @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
 
-  .topbar{ display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom: 28px; }
-  .brand{ font-family:'Oswald', sans-serif; font-weight:700; font-size:28px; letter-spacing:0.5px; text-transform: uppercase; }
-  .brand .accent{ color: var(--amber); }
-  .brand-mark{ color: var(--cyan); margin-right: 6px; }
-  .tagline{ color: var(--muted); font-size: 14px; }
+  /* Typography & Header */
+  .topbar { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .brand .accent { color: var(--amber); }
+  .brand-mark { color: var(--cyan); margin-right: 6px; }
+  .tagline { color: var(--muted); font-size: 14px; }
 
-  .layout{ display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start; }
-  @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
 
-  .video-frame{
+  /* Video Feed */
+  .video-frame {
     position: relative; width: 100%; aspect-ratio: 4 / 3;
     background: #000; border-radius: var(--radius); overflow: hidden;
     border: 1px solid var(--panel-border);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 20px 50px -20px rgba(0,0,0,0.6);
   }
-  .video-frame img{ width: 100%; height: 100%; object-fit: cover; display:block; }
+  .video-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  .hud{ position:absolute; left:0; right:0; display:flex; padding: 12px 16px; pointer-events:none; }
-  .hud-top{ top:0; justify-content: space-between; align-items: center; }
-  
-  .hud-chip{
-    font-family:'JetBrains Mono', monospace; font-size: 13px; color: var(--text);
-    background: #0b0e14; border: 1px solid var(--panel-border);
+  /* HUD Overlays */
+  .hud { position: absolute; left: 0; right: 0; display: flex; padding: 12px 16px; pointer-events: none; }
+  .hud-top { top: 0; justify-content: space-between; align-items: center; }
+  .hud-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--panel-border);
     padding: 6px 12px; border-radius: 999px;
   }
-  .hud-stats-minimal {
-    font-weight: 500;
-    color: var(--cyan);
+  .hud-stats-minimal { font-weight: 500; color: var(--cyan); }
+  .hud-bottom {
+    bottom: 0; background: linear-gradient(180deg, transparent, rgba(11,14,20,0.95) 20%);
+    padding: 24px 16px 12px; font-size: 15px; color: var(--text); text-align: center; 
+    justify-content: center; min-height: 48px; z-index: 10;
   }
-  .hud-bottom{
-    bottom: 0; background: linear-gradient(180deg, transparent, rgba(11,14,20,0.85) 40%);
-    padding-top: 32px; font-size: 14px; color: var(--text);
-    text-align: center; justify-content: center;
-    min-height: 48px;
-  }
-  .hud-bottom span{ font-weight: 500; }
-  .hud-bottom.warn span{ color: var(--red); }
-  .hud-bottom.good span{ color: var(--cyan); }
+  .hud-bottom span { font-weight: 600; letter-spacing: 0.5px; }
+  .hud-bottom.warn span { color: var(--red) !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .hud-bottom.good span { color: var(--cyan) !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
+  /* Logs */
+  .log-header { font-family: 'Oswald', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 8px; }
   .form-log {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    padding: 14px;
-    max-height: 180px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius);
+    padding: 14px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
   }
   .log-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(255, 93, 93, 0.08);
-    border-left: 3px solid var(--red);
-    padding: 8px 12px;
-    border-radius: 6px;
-    animation: fadeIn 0.2s ease-out;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255, 93, 93, 0.08); border-left: 3px solid var(--red); padding: 8px 12px;
+    border-radius: 6px; animation: fadeIn 0.2s ease-out;
   }
-  .log-item.good {
-    background: rgba(63, 208, 201, 0.08);
-    border-left: 3px solid var(--cyan);
-  }
+  .log-item.good { background: rgba(63, 208, 201, 0.08); border-left: 3px solid var(--cyan); }
   .log-time { color: var(--muted); margin-right: 6px; }
-  .log-frame-tag {
-    font-size: 11px;
-    background: var(--bg);
-    border: 1px solid var(--panel-border);
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: var(--amber);
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .log-frame-tag { font-size: 11px; background: var(--bg); border: 1px solid var(--panel-border); padding: 2px 6px; border-radius: 4px; color: var(--amber); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-  .events{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
-  @media (max-width: 780px){ .events{ grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 480px){ .events{ grid-template-columns: 1fr; } }
-
-  .event-btn{
-    text-align:left; background: var(--panel); border: 1px solid var(--panel-border);
+  /* Event Grid */
+  .events { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+  @media (max-width: 780px) { .events { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .events { grid-template-columns: 1fr; } }
+  
+  .event-btn {
+    text-align: left; background: var(--panel); border: 1px solid var(--panel-border);
     border-radius: var(--radius); padding: 14px 16px; cursor: pointer; color: var(--text);
-    display:flex; flex-direction:column; gap: 4px; transition: border-color .15s, transform .15s;
+    display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, transform .15s;
   }
-  .event-btn:hover{ border-color: var(--amber); transform: translateY(-1px); }
-  .event-btn:focus-visible{ outline: 2px solid var(--cyan); outline-offset: 2px; }
-  .event-btn.active{ border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan) inset; }
-  .event-index{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 1px; }
-  .event-name{ font-family:'Oswald', sans-serif; font-size: 16px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .event-desc{ font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .event-btn:hover { border-color: var(--amber); transform: translateY(-1px); }
+  .event-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .event-btn.active { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan) inset; }
+  .event-index { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 1px; }
+  .event-name { font-family: 'Oswald', sans-serif; font-size: 16px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .event-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
 
-  .telemetry{
+  /* Telemetry Sidebar */
+  .telemetry {
     background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius);
-    padding: 20px; display:flex; flex-direction:column; gap: 18px;
+    padding: 20px; display: flex; flex-direction: column; gap: 18px;
   }
-  .telemetry h2{
-    font-family:'Oswald', sans-serif; font-size: 13px; text-transform: uppercase;
-    letter-spacing: 1.5px; color: var(--muted); margin: 0;
-  }
+  .telemetry h2 { font-family: 'Oswald', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 0; }
+  
+  .gauges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .gauge { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .gauge svg { width: 88px; height: 88px; }
+  .gauge-track { fill: none; stroke: var(--panel-border); stroke-width: 8; }
+  .gauge-value { fill: none; stroke: var(--cyan); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .25s ease; }
+  .gauge-num { font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+  .gauge-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
-  .gauges{ display:grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .gauge{ display:flex; flex-direction:column; align-items:center; gap: 6px; }
-  .gauge svg{ width: 88px; height: 88px; }
-  .gauge-track{ fill:none; stroke: var(--panel-border); stroke-width: 8; }
-  .gauge-value{ fill:none; stroke: var(--cyan); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .25s ease; }
-  .gauge-num{ font-family:'JetBrains Mono', monospace; font-size: 15px; }
-  .gauge-label{ font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .dist-meter, .jump-meter { display: flex; flex-direction: column; gap: 8px; }
+  .dist-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-track { height: 14px; border-radius: 999px; background: var(--panel-border); overflow: hidden; }
+  .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--amber)); transition: width .25s ease; }
+  .bar-readout { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); }
+  .bar-readout b { color: var(--text); font-weight: 600; }
 
-  .dist-meter, .jump-meter{ display:flex; flex-direction:column; gap: 8px; }
-  .dist-label{ font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .bar-track{ height: 14px; border-radius: 999px; background: var(--panel-border); overflow:hidden; }
-  .bar-fill{ height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--amber)); transition: width .25s ease; }
-  .bar-readout{ display:flex; justify-content: space-between; font-family:'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); }
-  .bar-readout b{ color: var(--text); font-weight:600; }
-
-  .actions{ display:flex; flex-direction:column; gap: 10px; }
-  button.btn-primary, button.btn-secondary{
-    font-family:'Inter', sans-serif; font-weight: 600; font-size: 14px;
+  /* Actions & Status */
+  .actions { display: flex; flex-direction: column; gap: 10px; }
+  button.btn-primary, button.btn-secondary {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
     border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer;
   }
-  button.btn-primary{ background: var(--amber); color: #1a1204; }
-  button.btn-primary:hover{ filter: brightness(1.08); }
-  button.btn-primary:disabled{ background: var(--panel-border); color: var(--muted); cursor: default; }
-  button.btn-secondary{ background: transparent; border: 1px solid var(--cyan); color: var(--cyan); }
-  button.btn-secondary:hover{ background: rgba(63,208,201,0.08); }
-  button:focus-visible{ outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.btn-primary { background: var(--amber); color: #1a1204; transition: background 0.15s ease; }
+  button.btn-primary:hover { filter: brightness(1.08); }
+  button.btn-primary:disabled { background: var(--panel-border); color: var(--muted); cursor: default; }
+  button.btn-secondary { background: transparent; border: 1px solid var(--cyan); color: var(--cyan); }
+  button.btn-secondary:hover { background: rgba(63,208,201,0.08); }
+  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-  .status{ font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+  .status { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
 
-  .report{
+  /* Reports */
+  .report {
     margin-top: 24px; background: var(--panel); border: 1px solid var(--panel-border);
-    border-radius: var(--radius); padding: 24px; display:none;
+    border-radius: var(--radius); padding: 24px; display: none;
   }
-  .report h2{ font-family:'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px; }
-  .report .sport{ color: var(--amber); font-size: 20px; font-weight: 600; }
-  .traits{ display:flex; gap: 8px; flex-wrap:wrap; margin: 12px 0 20px; }
-  .trait-tag{
-    font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan);
+  .report h2 { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px; }
+  .report .sport { color: var(--amber); font-size: 20px; font-weight: 600; }
+  .traits { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 20px; }
+  .trait-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan);
     border: 1px solid rgba(63,208,201,0.4); padding: 4px 10px; border-radius: 999px;
   }
-  .stat-row{ display:grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-  @media (max-width: 780px){ .stat-row{ grid-template-columns: repeat(2, 1fr); } }
-  .stat-box{ background: var(--bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px; text-align:center; }
-  .stat-box .num{ font-family:'JetBrains Mono', monospace; font-size: 22px; color: var(--text); }
-  .stat-box .lbl{ font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-  .report-footnote{ font-size: 11px; color: var(--muted); margin-top: 18px; }
+  
+  .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 780px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+  .stat-box { background: var(--bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-box .num { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--text); }
+  .stat-box .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .report-footnote { font-size: 11px; color: var(--muted); margin-top: 18px; }
 
-  .radar-wrap{ display:flex; justify-content:center; margin: 4px 0 22px; }
-  .radar-wrap svg{ width: 260px; height: 260px; overflow: visible; }
-  .radar-ring{ fill:none; stroke: var(--panel-border); stroke-width: 1; }
-  .radar-axis{ stroke: var(--panel-border); stroke-width: 1; }
-  .radar-fill{ fill: var(--cyan); fill-opacity: 0.25; stroke: var(--cyan); stroke-width: 2; }
-  .radar-label{ font-family:'JetBrains Mono', monospace; font-size: 9px; fill: var(--muted); }
-
-  .improve-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
-  .improve-card{ background: var(--bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px; }
-  .improve-card h3{
-    font-family:'Oswald', sans-serif; font-size: 12px; text-transform: uppercase;
-    letter-spacing: 0.5px; margin: 0 0 8px; color: var(--text);
-  }
-  .improve-svg{ width: 100%; height: 56px; display:block; }
-  .improve-axis{ stroke: var(--panel-border); stroke-width: 1; }
-  .improve-line{ fill:none; stroke: var(--cyan); stroke-width: 2; }
-  .improve-dot{ fill: var(--cyan); }
-  .improve-dot-last{ fill: var(--amber); }
-  .improve-empty{ font-size: 11px; color: var(--muted); padding: 18px 0; text-align:center; }
-  .improve-stats{
-    display:flex; justify-content: space-between; margin-top: 8px;
-    font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
-  }
-  .improve-stats b{ color: var(--text); }
+  /* Radar */
+  .radar-wrap { display: flex; justify-content: center; margin: 4px 0 22px; }
+  .radar-wrap svg { width: 260px; height: 260px; overflow: visible; }
+  .radar-ring { fill: none; stroke: var(--panel-border); stroke-width: 1; }
+  .radar-axis { stroke: var(--panel-border); stroke-width: 1; }
+  .radar-fill { fill: var(--cyan); fill-opacity: 0.25; stroke: var(--cyan); stroke-width: 2; }
+  .radar-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; fill: var(--muted); }
+  
+  .empty-log-state { color: var(--muted); text-align: center; padding: 20px 0; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -247,6 +203,7 @@
         <span class="ticker-item"><span class="dot"></span>Real-Time Joint Tracking</span>
         <span class="ticker-item"><span class="dot"></span>Vision-Based Combine</span>
         <span class="ticker-item"><span class="dot"></span>Instant Scout Reports</span>
+        <!-- Duplicated for seamless loop -->
         <span class="ticker-item"><span class="dot"></span>Detailed Analysis</span>
         <span class="ticker-item"><span class="dot"></span>Form-First Scoring</span>
         <span class="ticker-item"><span class="dot"></span>Real-Time Joint Tracking</span>
@@ -257,7 +214,7 @@
 
     <header class="topbar">
       <div class="brand"><span class="brand-mark">&#9670;</span>Combine<span class="accent">AI</span></div>
-      <div class="tagline">Vision-based scouting combine — form-first scoring from joint angles and movement distance, not just rep count</div>
+      <div class="tagline">Use your physical performance to create a professional sports profile using AI</div>
     </header>
 
     <main class="layout">
@@ -271,10 +228,10 @@
           <div class="hud hud-bottom" id="hudFeedback"></div>
         </div>
 
-        <div style="margin-top: 16px;">
-          <h3 style="font-family:'Oswald', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 8px;">Live Form Analysis Log</h3>
+        <div>
+          <h3 class="log-header">Live Form Analysis Log</h3>
           <div class="form-log" id="formLog">
-            <div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>
+            <div class="empty-log-state">Log clean. Awaiting activity analysis...</div>
           </div>
         </div>
 
@@ -312,13 +269,13 @@
 
         <div class="gauges" id="gauges"></div>
 
-        <div class="dist-meter" id="distMeter" style="display:none;">
+        <div class="dist-meter hidden" id="distMeter">
           <div class="dist-label" id="distLabel">Metric</div>
           <div class="bar-track"><div class="bar-fill" id="distBarFill"></div></div>
           <div class="bar-readout"><span id="distReadout">0%</span><span>target: <b>100%</b></span></div>
         </div>
 
-        <div class="jump-meter" id="jumpMeter" style="display:none;">
+        <div class="jump-meter hidden" id="jumpMeter">
           <div class="bar-track"><div class="bar-fill" id="jumpBarFill"></div></div>
           <div class="bar-readout">
             <span>Last: <b id="jumpLast">0</b> cm</span>
@@ -327,9 +284,8 @@
         </div>
 
         <div class="actions">
-          <button class="btn-primary" id="startBtn" onclick="startTest()">Start</button>
-          <button class="btn-secondary" id="restartBtn" onclick="restartTest()">Restart</button>
-          <button class="btn-secondary" onclick="saveCurrentScore()">Save Score</button>
+          <button class="btn-primary" id="startBtn" onclick="toggleTest()">Start</button>
+          <button class="btn-secondary" onclick="saveCurrentScore()">Log Session Score</button>
           <button class="btn-secondary" onclick="generateProfile()">Generate Scout Report</button>
         </div>
 
@@ -351,17 +307,6 @@
       </div>
       <p class="report-footnote">Screenshot this and send it to your coach.</p>
     </section>
-
-    <section class="report" id="improvementSection" style="display:block;">
-      <h2>Improvement</h2>
-      <p class="report-footnote" style="margin: 0 0 16px;">
-        Session history is saved in this browser — press "Save Score" after each attempt to track progress over time.
-      </p>
-      <div class="improve-grid" id="improveGrid"></div>
-      <div class="actions" style="max-width: 200px; margin-top: 16px;">
-        <button class="btn-secondary" onclick="clearHistory()">Clear History</button>
-      </div>
-    </section>
   </div>
 
 <script>
@@ -371,9 +316,17 @@
     left_elbow: "L ELBOW", right_elbow: "R ELBOW",
     body_line: "BODY LINE",
   };
+  
   const gaugeState = {}; 
   let currentMode = "running_spot";
   let lastFeedbackStr = "";
+  let isTestRunning = false;
+  let pollTimeout = null;
+
+  // Realtime Timer variables
+  let localTimeRemaining = 0;
+  let lastSyncTime = Date.now();
+  let timerAnimFrame = null;
 
   const eventConfig = {
     running_spot: { gauges: ["left_elbow", "right_elbow"], dist: { label: "Cadence", key: "cadence_pct" } },
@@ -387,6 +340,7 @@
     running_spot: "steps", jump: "jumps", high_knees: "reps", pushup: "reps", plank: "checks",
   };
 
+  // --- UI Builders ---
   function buildGauge(key) {
     const wrap = document.createElement('div');
     wrap.className = 'gauge';
@@ -418,64 +372,105 @@
   }
 
   function setStartButtonState(started) {
+    isTestRunning = started;
     const startBtn = document.getElementById('startBtn');
-    startBtn.textContent = started ? 'Running…' : 'Start';
-    startBtn.disabled = started;
+    if (started) {
+      startBtn.textContent = 'Stop';
+      startBtn.style.background = 'var(--red)';
+      startBtn.style.color = '#fff';
+    } else {
+      startBtn.textContent = 'Start';
+      startBtn.style.background = 'var(--amber)';
+      startBtn.style.color = '#1a1204';
+    }
+  }
+
+  // --- Smooth 60fps Timer Logic ---
+  function updateLocalTimer() {
+    if (!isTestRunning) return;
+    
+    const now = Date.now();
+    const elapsed = (now - lastSyncTime) / 1000.0;
+    let displayTime = Math.max(0, localTimeRemaining - elapsed);
+    
+    document.getElementById('hudTimer').textContent = displayTime.toFixed(1) + 's';
+    
+    if (displayTime > 0 && isTestRunning) {
+        timerAnimFrame = requestAnimationFrame(updateLocalTimer);
+    }
+  }
+
+  // --- API Calls & Core Logic ---
+  function toggleTest() {
+    if (!isTestRunning) {
+      // START logic
+      fetch('/start_test', { method: 'POST' })
+        .then(res => res.json())
+        .then(() => {
+          setStartButtonState(true);
+          document.getElementById('systemStatus').textContent = "Test started — go!";
+        })
+        .catch(err => console.error('Error starting test:', err));
+    } else {
+      // GODLY STOP logic: Instantly freeze all UI loops and reset visuals
+      isTestRunning = false;
+      if (timerAnimFrame) cancelAnimationFrame(timerAnimFrame);
+      timerAnimFrame = null;
+      document.getElementById('hudTimer').textContent = '--';
+      
+      resetUI();
+      setStartButtonState(false);
+      document.getElementById('systemStatus').textContent = "Force stopping...";
+
+      fetch('/restart_test', { method: 'POST' })
+        .then(res => res.json())
+        .then(() => {
+          document.getElementById('systemStatus').textContent = "Stopped and reset — press Start when ready.";
+        })
+        .catch(err => console.error('Error stopping test:', err));
+    }
+  }
+
+  function resetUI() {
+    clearGauges();
+    document.getElementById('jumpBarFill').style.width = '0%';
+    document.getElementById('jumpLast').textContent = '0';
+    document.getElementById('jumpBest').textContent = '0';
+    document.getElementById('distBarFill').style.width = '0%';
+    document.getElementById('distReadout').textContent = '0%';
+    document.getElementById('formLog').innerHTML = '<div class="empty-log-state">Log clean. Awaiting activity analysis...</div>';
+    lastFeedbackStr = "";
+    document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[currentMode] || 'reps'} · Score: 0`;
   }
 
   function setMode(mode, btnEl) {
+    if(isTestRunning) toggleTest(); // Ensure tests are killed if switching modes mid-flight
+
     currentMode = mode;
     document.querySelectorAll('.event-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
-    clearGauges();
     
-    document.getElementById('formLog').innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>';
-    lastFeedbackStr = "";
-
+    resetUI();
     const cfg = eventConfig[mode] || {};
-    document.getElementById('jumpMeter').style.display = cfg.jumpMeter ? 'flex' : 'none';
-    document.getElementById('gauges').style.display = cfg.jumpMeter ? 'none' : 'grid';
-    document.getElementById('distMeter').style.display = cfg.dist ? 'flex' : 'none';
-    if (cfg.dist) document.getElementById('distLabel').textContent = cfg.dist.label;
     
-    document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[mode] || 'reps'} · Score: 0`;
+    // Toggle relevant telemetry UI
+    document.getElementById('jumpMeter').classList.toggle('hidden', !cfg.jumpMeter);
+    document.getElementById('gauges').classList.toggle('hidden', !!cfg.jumpMeter);
+    document.getElementById('distMeter').classList.toggle('hidden', !cfg.dist);
+    
+    if (cfg.dist) document.getElementById('distLabel').textContent = cfg.dist.label;
     setStartButtonState(false);
 
     fetch('/set_mode', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({mode: mode})
-    });
+    }).catch(err => console.error('Error setting mode:', err));
+    
     document.getElementById('systemStatus').textContent = "Switched to: " + mode.replace('_', ' ').toUpperCase() + " — press Start when ready.";
   }
 
-  function startTest() {
-    fetch('/start_test', { method: 'POST' })
-      .then(res => res.json())
-      .then(() => {
-        setStartButtonState(true);
-        document.getElementById('systemStatus').textContent = "Test started — go!";
-      });
-  }
-
-  function restartTest() {
-    fetch('/restart_test', { method: 'POST' })
-      .then(res => res.json())
-      .then(() => {
-        clearGauges();
-        document.getElementById('jumpBarFill').style.width = '0%';
-        document.getElementById('jumpLast').textContent = '0';
-        document.getElementById('jumpBest').textContent = '0';
-        document.getElementById('distBarFill').style.width = '0%';
-        document.getElementById('distReadout').textContent = '0%';
-        document.getElementById('formLog').innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>';
-        lastFeedbackStr = "";
-        document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[currentMode] || 'reps'} · Score: 0`;
-        setStartButtonState(false);
-        document.getElementById('systemStatus').textContent = "Reset — press Start when ready.";
-      });
-  }
-
+  // --- Charts & Radar ---
   const RADAR_AXES = [
     { key: 'run', label: 'RUNNING' },
     { key: 'jump', label: 'JUMP' },
@@ -491,221 +486,170 @@
 
   function buildRadarChart(values) {
     const cx = 120, cy = 120, maxR = 88;
-    let rings = '';
+    let rings = '', axes = '', labels = '';
+    
     [0.25, 0.5, 0.75, 1.0].forEach(frac => {
       const pts = RADAR_AXES.map((_, i) => polarPoint(i, maxR * frac, cx, cy).join(',')).join(' ');
       rings += `<polygon points="${pts}" class="radar-ring"></polygon>`;
     });
-    let axes = '';
-    RADAR_AXES.forEach((_, i) => {
+    
+    RADAR_AXES.forEach((ax, i) => {
       const [x, y] = polarPoint(i, maxR, cx, cy);
       axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="radar-axis"></line>`;
+      
+      const [lx, ly] = polarPoint(i, maxR + 20, cx, cy);
+      labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" class="radar-label">${ax.label}</text>`;
     });
+    
     const dataPts = RADAR_AXES.map((ax, i) => {
       const v = Math.max(0, Math.min(100, values[ax.key] || 0));
       return polarPoint(i, maxR * (v / 100), cx, cy).join(',');
     }).join(' ');
-    const dataPolygon = `<polygon points="${dataPts}" class="radar-fill"></polygon>`;
-    let labels = '';
-    RADAR_AXES.forEach((ax, i) => {
-      const [x, y] = polarPoint(i, maxR + 20, cx, cy);
-      labels += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="radar-label">${ax.label}</text>`;
-    });
-    document.getElementById('radarSvg').innerHTML = rings + axes + dataPolygon + labels;
-  }
-
-  const HISTORY_KEY = 'combineAI_sessionHistory_v1';
-  const EVENT_ORDER = ["running_spot", "jump", "high_knees", "pushup", "plank"];
-  const EVENT_LABELS = {
-    running_spot: "Running", jump: "Vertical Jump", high_knees: "High Knees",
-    pushup: "Push-Ups", plank: "Plank Hold",
-  };
-
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
-  }
-
-  function saveHistory(hist) {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); } catch (e) { }
-  }
-
-  function appendSessionRecord(test, entry) {
-    const hist = loadHistory();
-    if (!hist[test]) hist[test] = [];
-    hist[test].push({ t: Date.now(), score: entry.score || 0 });
-    if (hist[test].length > 30) hist[test] = hist[test].slice(-30);
-    saveHistory(hist);
-  }
-
-  function clearHistory() {
-    localStorage.removeItem(HISTORY_KEY);
-    renderImprovementCharts();
-    document.getElementById('systemStatus').textContent = "History cleared.";
-  }
-
-  function buildSparkline(history, isJumpEvent = false) {
-    const w = 200, h = 56, pad = 6;
-    if (!history || history.length === 0) {
-      return `<div class="improve-empty">No sessions saved yet</div>`;
-    }
-    const n = history.length;
     
-    let maxCeiling = 100;
-    if (isJumpEvent) {
-      const peakRecordedJump = Math.max(...history.map(e => e.score), 0);
-      maxCeiling = peakRecordedJump > 0 ? peakRecordedJump * 1.15 : 80; 
-    }
-
-    const pts = history.map((entry, i) => {
-      const x = n === 1 ? w / 2 : pad + i * (w - 2 * pad) / (n - 1);
-      const y = h - pad - (Math.max(0, Math.min(maxCeiling, entry.score)) / maxCeiling) * (h - 2 * pad);
-      return [x, y];
-    });
-    const polyPoints = pts.map(p => p.join(',')).join(' ');
-    const dots = pts.map(([x, y], i) =>
-      `<circle cx="${x}" cy="${y}" r="${i === n - 1 ? 3 : 2}" class="${i === n - 1 ? 'improve-dot-last' : 'improve-dot'}"></circle>`
-    ).join('');
-    return `<svg viewBox="0 0 ${w} ${h}" class="improve-svg" preserveAspectRatio="none">
-      <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" class="improve-axis"></line>
-      <polyline points="${polyPoints}" class="improve-line"></polyline>
-      ${dots}
-    </svg>`;
-  }
-
-  function renderImprovementCharts() {
-    const hist = loadHistory();
-    const grid = document.getElementById('improveGrid');
-    grid.innerHTML = EVENT_ORDER.map(key => {
-      const entries = hist[key] || [];
-      const latest = entries.length ? Math.round(entries[entries.length - 1].score) : 0;
-      const best = entries.length ? Math.round(Math.max(...entries.map(e => e.score))) : 0;
-      return `<div class="improve-card">
-        <h3>${EVENT_LABELS[key]}</h3>
-        ${buildSparkline(entries, key === 'jump')}
-        <div class="improve-stats"><span>Latest: <b>${latest}</b></span><span>Best: <b>${best}</b></span></div>
-      </div>`;
-    }).join('');
+    const dataPolygon = `<polygon points="${dataPts}" class="radar-fill"></polygon>`;
+    document.getElementById('radarSvg').innerHTML = rings + axes + dataPolygon + labels;
   }
 
   function saveCurrentScore() {
     fetch('/save_score', { method: 'POST' })
       .then(res => res.json())
       .then(data => {
-        document.getElementById('systemStatus').textContent = "Score saved.";
-        const entry = data.saved_data && data.saved_data[currentMode];
-        if (entry) {
-          appendSessionRecord(currentMode, entry);
-          renderImprovementCharts();
-        }
-      });
+        document.getElementById('systemStatus').textContent = "Score saved to session memory.";
+      }).catch(err => console.error("Error saving score:", err));
   }
 
   function generateProfile() {
     fetch('/generate_profile')
       .then(res => res.json())
       .then(data => {
-        document.getElementById('profileCard').style.display = 'block';
+        const card = document.getElementById('profileCard');
+        card.style.display = 'block';
         document.getElementById('sportRec').textContent = data.sport;
-        document.getElementById('traits').innerHTML =
-          data.skills.map(s => `<span class="trait-tag">${s}</span>`).join('');
+        document.getElementById('traits').innerHTML = data.skills.map(s => `<span class="trait-tag">${s}</span>`).join('');
         document.getElementById('runStat').textContent = data.run_stat;
-        document.getElementById('jumpStat').textContent = data.jump_stat;
+        document.getElementById('jumpStat').textContent = Number(data.jump_stat).toFixed(1);
         document.getElementById('kneeStat').textContent = data.knee_stat;
         document.getElementById('pushupStat').textContent = data.pushup_stat;
         document.getElementById('plankStat').textContent = data.plank_stat;
+        
         buildRadarChart({
           run: data.run_stat, jump: data.jump_score, knees: data.knee_stat,
           pushup: data.pushup_stat, plank: data.plank_stat,
         });
-        document.getElementById('profileCard').scrollIntoView({behavior: 'smooth', block: 'start'});
+        
+        card.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }).catch(err => console.error("Error generating profile:", err));
+  }
+
+  // --- Real-time Polling ---
+  function fetchStats() {
+    fetch('/live_stats')
+      .then(res => res.json())
+      .then(data => processPollData(data))
+      .catch(() => { /* Silent failure to prevent console spam if backend restarts */ })
+      .finally(() => {
+        pollTimeout = setTimeout(fetchStats, 350);
       });
   }
 
-  renderImprovementCharts();
+  function processPollData(data) {
+    // 1. Critical System Errors (Webcam unplugged or failed)
+    if (data.camera_error) {
+      document.getElementById('hudFeedback').innerHTML = `<span>CRITICAL ERROR: Camera disconnected or blocked. Please refresh the page.</span>`;
+      document.getElementById('hudFeedback').className = "hud hud-bottom warn";
+      if (isTestRunning) toggleTest(); // Trigger Godly Stop
+      return; 
+    }
 
-  function poll() {
-    fetch('/live_stats').then(res => res.json()).then(data => {
-      const currentReps = data.reps ?? 0;
-      const currentScore = data.score ?? 0;
-      const unitLabel = repLabels[currentMode] || 'reps';
+    // 2. HUD Minimal Stats Update
+    const currentReps = data.reps ?? 0;
+    const currentScore = data.score ?? 0;
+    const unitLabel = repLabels[currentMode] || 'reps';
+    document.getElementById('hudStatsMinimal').textContent = `${currentReps} ${unitLabel} · Score: ${currentScore}`;
+
+    // 3. Central Feedback Overlay Routing
+    const feedbackText = data.feedback || '';
+    const isSystemAlert = /step back|make sure|baseline|flight phase|landing registered|reset and hold|done|waiting|ready/i.test(feedbackText);
+    const isFormCoaching = /optimize|maintain|increase|incomplete|engage|eccentric|lumbar|concentric|control|pelvic|isometric|stride|triple-flexion/i.test(feedbackText);
+    const fbEl = document.getElementById('hudFeedback');
+
+    if (isSystemAlert && feedbackText !== "") {
+      fbEl.innerHTML = `<span>${feedbackText}</span>`;
+      fbEl.className = "hud hud-bottom warn";
+    } else {
+      fbEl.innerHTML = ""; 
+      fbEl.className = "hud hud-bottom";
+    }
+
+    // 4. Form Log Scroll Update
+    if (feedbackText && feedbackText !== lastFeedbackStr && isFormCoaching && !isSystemAlert) {
+      lastFeedbackStr = feedbackText;
+      const logBox = document.getElementById('formLog');
       
-      document.getElementById('hudStatsMinimal').textContent = `${currentReps} ${unitLabel} · Score: ${currentScore}`;
-
-      const feedbackText = data.feedback || '';
+      if(logBox.querySelector('.empty-log-state')) { logBox.innerHTML = ''; }
       
-      const isSystemAlert = /no person|step|frame|calibrat|seconds|remaining|ready|start|system|waiting/i.test(feedbackText);
-      const isFormCoaching = /depth|lockout|stride|form|knee|elbow|straight|bent|low|high|hold/i.test(feedbackText);
+      const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
+      const isNegativeForm = /warning|incomplete|avoid|loss|sagging/i.test(feedbackText);
       
-      const fbEl = document.getElementById('hudFeedback');
+      const logRow = document.createElement('div');
+      logRow.className = `log-item ${isNegativeForm ? '' : 'good'}`;
+      logRow.innerHTML = `
+        <div>
+          <span class="log-time">[T-${timestamp}]</span>
+          <span>${feedbackText}</span>
+        </div>
+        <span class="log-frame-tag">📸 Frame #${Math.floor(Math.random() * 900) + 100}</span>
+      `;
+      logBox.appendChild(logRow);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
 
-      if (isSystemAlert || feedbackText === "") {
-        fbEl.innerHTML = ""; 
-        fbEl.className = "hud hud-bottom";
-      } else if (isFormCoaching) {
-        fbEl.innerHTML = `<span>${feedbackText}</span>`;
-        fbEl.className = "hud hud-bottom warn";
+    // 5. Timer Synchronization Check
+    if (typeof data.time_remaining === 'number') {
+      localTimeRemaining = data.time_remaining;
+      lastSyncTime = Date.now();
+      
+      if (isTestRunning && !timerAnimFrame) {
+        timerAnimFrame = requestAnimationFrame(updateLocalTimer);
       }
+    } else {
+      document.getElementById('hudTimer').textContent = '--';
+    }
 
-      if (feedbackText && feedbackText !== lastFeedbackStr && isFormCoaching && !isSystemAlert) {
-        lastFeedbackStr = feedbackText;
-        const logBox = document.getElementById('formLog');
-        
-        if(logBox.innerText.includes("Log clean")) { logBox.innerHTML = ''; }
-        
-        const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
-        const isGoodForm = /great|lockout|smooth|solid/i.test(feedbackText);
-        
-        const logRow = document.createElement('div');
-        logRow.className = `log-item ${isGoodForm ? 'good' : ''}`;
-        
-        logRow.innerHTML = `
-          <div>
-            <span class="log-time">[T-${timestamp}]</span>
-            <span>${feedbackText}</span>
-          </div>
-          <span class="log-frame-tag">📸 Frame #${Math.floor(Math.random() * 900) + 100}</span>
-        `;
-        logBox.appendChild(logRow);
-        logBox.scrollTop = logBox.scrollHeight;
-      }
+    // 6. UI Updates based on event mode
+    if (data.angles) {
+      for (const [key, val] of Object.entries(data.angles)) updateGauge(key, val);
+    }
 
-      const timerEl = document.getElementById('hudTimer');
-      if (typeof data.time_remaining === 'number') {
-        timerEl.textContent = data.time_remaining.toFixed(1) + 's';
-      } else {
-        timerEl.textContent = '--';
-      }
+    const cfg = eventConfig[currentMode] || {};
+    if (cfg.dist && typeof data[cfg.dist.key] === 'number') {
+      const pct = Math.max(0, Math.min(140, data[cfg.dist.key]));
+      document.getElementById('distBarFill').style.width = Math.min(100, pct) + '%';
+      document.getElementById('distReadout').textContent = Math.round(pct) + '%';
+    }
 
-      if (data.angles) {
-        for (const [key, val] of Object.entries(data.angles)) updateGauge(key, val);
-      }
+    if (currentMode === 'jump') {
+      const best = Number(data.best_jump_cm || 0);
+      const last = Number(data.last_jump_cm || 0);
+      document.getElementById('jumpBest').textContent = best.toFixed(0);
+      document.getElementById('jumpLast').textContent = last.toFixed(0);
+      document.getElementById('jumpBarFill').style.width = Math.min(100, (best / 80) * 100) + '%';
+    }
 
-      const cfg = eventConfig[currentMode] || {};
-      if (cfg.dist && typeof data[cfg.dist.key] === 'number') {
-        const pct = Math.max(0, Math.min(140, data[cfg.dist.key]));
-        document.getElementById('distBarFill').style.width = Math.min(100, pct) + '%';
-        document.getElementById('distReadout').textContent = Math.round(pct) + '%';
+    // 7. Verify Global State matching Backend
+    if (typeof data.started === 'boolean') {
+      const running = data.started && !data.done;
+      if (isTestRunning !== running) {
+          setStartButtonState(running);
       }
-
-      if (typeof data.started === 'boolean') {
-        setStartButtonState(data.started && !data.done);
+      if(data.done && data.started) {
+         document.getElementById('systemStatus').textContent = "Test complete!";
       }
-
-      if (currentMode === 'jump') {
-        const best = data.best_jump_cm || 0;
-        const last = data.last_jump_cm || 0;
-        document.getElementById('jumpBest').textContent = best.toFixed ? best.toFixed(0) : best;
-        document.getElementById('jumpLast').textContent = last.toFixed ? last.toFixed(0) : last;
-        document.getElementById('jumpBarFill').style.width = Math.min(100, (best / 80) * 100) + '%';
-      }
-    }).catch(() => {});
+    }
   }
 
-  setInterval(poll, 350);
-  poll();
+  // Initialize
+  fetchStats(); // Start recursive polling loop
 </script>
 </body>
 </html>

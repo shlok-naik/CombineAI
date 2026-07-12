@@ -1,10 +1,13 @@
+"""
+Flask application handling API routing and bridging the frontend to OpenCV tracking.
+"""
+import time
 from flask import Flask, Response, jsonify, render_template, request
 from detector import generate_live_stream, live_state, TEST_REGISTRY
 
 app = Flask(__name__)
 
-# Every test now saves its composite 0-100 form score alongside supporting
-# numbers (rep/step/sample count, or best jump distance).
+# User stats (Global). 
 user_stats = {
     "running_spot": {"score": 0, "reps": 0},
     "high_knees": {"score": 0, "reps": 0},
@@ -16,43 +19,69 @@ user_stats = {
 
 @app.route('/')
 def index():
+    """Serves the main frontend dashboard."""
     return render_template('index.html')
 
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(generate_live_stream(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    """Streams the OpenCV video feed using multipart replacement."""
+    
+    # If a feed already exists (e.g. from a page refresh), force it to terminate
+    # before spinning up a new one so they don't fight over webcam access.
+    if live_state.stream_active:
+        live_state.is_streaming = False
+        start_wait = time.time()
+        # Wait up to 2 seconds for the old camera thread to release hardware
+        while live_state.stream_active and time.time() - start_wait < 2.0:
+            time.sleep(0.1)
+            
+    return Response(
+        generate_live_stream(), 
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
 
 
 @app.route('/set_mode', methods=['POST'])
 def set_mode():
+    """Changes the active fitness test mode."""
     data = request.json or {}
     mode = data.get("mode", "high_knees")
+    
     if mode not in TEST_REGISTRY:
         return jsonify({"status": "error", "message": f"Unknown mode '{mode}'"}), 400
+        
     live_state.set_test(mode)
     return jsonify({"status": "initialized", "mode": mode})
 
 
 @app.route('/start_test', methods=['POST'])
 def start_test():
+    """Triggers the active test to begin tracking."""
     live_state.start_test()
     return jsonify({"status": "started", "snapshot": live_state.snapshot()})
 
 
 @app.route('/restart_test', methods=['POST'])
 def restart_test():
+    """Resets the currently active test data."""
     live_state.restart_test()
     return jsonify({"status": "restarted", "snapshot": live_state.snapshot()})
 
 
 @app.route('/live_stats')
 def live_stats():
+    """
+    Returns real-time telemetry from the OpenCV processing thread.
+    Also acts as a heartbeat check to keep the webcam stream alive.
+    """
+    live_state.ping()
     return jsonify(live_state.snapshot())
 
 
 @app.route('/save_score', methods=['POST'])
 def save_score():
+    """Commits the current session's score to the local user_stats dictionary."""
     snap = live_state.snapshot()
     test = snap.get("test")
 
@@ -72,6 +101,7 @@ def save_score():
 
 @app.route('/generate_profile', methods=['GET'])
 def generate_profile():
+    """Generates an athletic profile based on saved metrics."""
     run_score = user_stats["running_spot"]["score"]
     knee_score = user_stats["high_knees"]["score"]
     jump_score = user_stats["jump"]["score"]
@@ -85,6 +115,7 @@ def generate_profile():
     recommended_sport = "General Athlete"
     traits = ["Adaptive Athlete"]
 
+    # Trait logic tree
     if pushup_score >= 75 and plank_score >= 75 and knee_score >= 70:
         recommended_sport = "Multi-Sport / Combine All-Rounder"
         traits = ["Complete Athletic Profile", "Strong Core-to-Power Transfer"]
@@ -117,9 +148,13 @@ def generate_profile():
 
 
 if __name__ == '__main__':
+    # Initial setup
     live_state.set_test("running_spot")
 
-    print("\n🚀 Combine AI Dashboard is live! Open your browser and go to:")
-    print("👉 http://127.0.0.1:5001\n")
+    HOST = '127.0.0.1'
+    PORT = 5001
 
-    app.run(host='127.0.0.1', port=5001, debug=False)
+    print(f"\n🚀 Combine AI Dashboard is live! Open your browser and go to:")
+    print(f"👉 http://{HOST}:{PORT}\n")
+
+    app.run(host=HOST, port=PORT, debug=False)

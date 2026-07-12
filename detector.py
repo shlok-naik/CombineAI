@@ -24,6 +24,7 @@ def calculate_angle(a, b, c):
 
 
 def get_xy(landmarks, landmark):
+    """Helper to extract [x, y] coordinates from MediaPipe landmarks."""
     lm = landmarks[landmark.value]
     return [lm.x, lm.y]
 
@@ -34,29 +35,21 @@ def clamp(value, lo, hi):
 
 # --- MODULAR TEST CLASSES ---
 class FitnessTest:
-    """Base class for all fitness/combine tests.
-
-    Tests are "armed" on creation but do not run until start() is called
-    explicitly (from the Start button). Every test reports a 0-100
-    `quality_score`: a composite of joint angles and normalized movement
-    distance, not just a rep tally. Raw rep count is still tracked (self.reps)
-    but is secondary information, not the headline number.
-    """
-
+    """Base class for all fitness/combine tests."""
     MIN_VISIBILITY = 0.5
 
     def __init__(self):
         self.reps = 0
-        self.feedback = "Press Start when you're ready"
+        self.feedback = "System ready. Awaiting manual start."
         self.is_done = False
         self.form_warnings = 0
         self.started = False
-        self.rep_scores = []       # history of per-rep composite scores (0-100)
-        self.quality_score = 0     # rolling average of rep_scores, the headline metric
+        self.rep_scores = []       
+        self.quality_score = 0     
 
     def start(self):
         self.started = True
-        self.feedback = "Go!"
+        self.feedback = "Test initiated."
 
     def process_frame(self, landmarks, frame_shape):
         if not self.started or self.is_done:
@@ -73,7 +66,6 @@ class FitnessTest:
         self.quality_score = round(sum(self.rep_scores) / len(self.rep_scores))
 
     def snapshot_extra(self):
-        """Optional extra fields merged into the live_stats payload."""
         return {}
 
     def _avg_visibility(self, landmarks, indices):
@@ -82,19 +74,16 @@ class FitnessTest:
 
 
 class RunningInPlaceTest(FitnessTest):
-    """Running-on-the-spot test focused on running FORM — cadence, posture,
-    and arm swing — not knee height (that's the dedicated High Knees event).
-    Any noticeable knee bend counts as a step."""
-
-    STEP_UP_ANGLE = 155      # hip-knee-ankle angle below this = a step has begun
-    STEP_DOWN_ANGLE = 170    # above this = foot back down, ready for next step
-    IDEAL_LEAN = 8.0         # a slight forward lean is proper running form
+    """Running-on-the-spot tracking optimal ground turnover and sagittal plane biomechanics."""
+    STEP_UP_ANGLE = 155      
+    STEP_DOWN_ANGLE = 170    
+    IDEAL_LEAN = 8.0         
     LEAN_TOLERANCE = 18.0
     ELBOW_TARGET = 90.0
     ELBOW_TOLERANCE = 45.0
-    CADENCE_TARGET = 170.0   # steps per minute, a common efficient-running benchmark
+    CADENCE_TARGET = 170.0   
     CADENCE_TOLERANCE = 55.0
-    CADENCE_WINDOW = 6       # steps used to estimate current cadence
+    CADENCE_WINDOW = 6       
 
     REQUIRED_LANDMARKS = [
         mp_pose.PoseLandmark.LEFT_SHOULDER.value, mp_pose.PoseLandmark.RIGHT_SHOULDER.value,
@@ -127,20 +116,20 @@ class RunningInPlaceTest(FitnessTest):
         remaining = max(0.0, self.duration - elapsed)
 
         if self._avg_visibility(landmarks, self.REQUIRED_LANDMARKS) < self.MIN_VISIBILITY:
-            self.feedback = "Step back so your full body is visible"
+            self.feedback = "Step back so your full anatomical structure is visible"
             return self.quality_score, self.feedback
 
         L = mp_pose.PoseLandmark
-        pts = {}
-        for s in ("LEFT", "RIGHT"):
-            pts[s] = {
+        pts = {
+            s: {
                 "shoulder": get_xy(landmarks, getattr(L, f"{s}_SHOULDER")),
                 "hip": get_xy(landmarks, getattr(L, f"{s}_HIP")),
                 "knee": get_xy(landmarks, getattr(L, f"{s}_KNEE")),
                 "ankle": get_xy(landmarks, getattr(L, f"{s}_ANKLE")),
                 "elbow": get_xy(landmarks, getattr(L, f"{s}_ELBOW")),
                 "wrist": get_xy(landmarks, getattr(L, f"{s}_WRIST")),
-            }
+            } for s in ("LEFT", "RIGHT")
+        }
 
         knee_angles, elbow_angles = {}, {}
         for s in ("LEFT", "RIGHT"):
@@ -184,17 +173,17 @@ class RunningInPlaceTest(FitnessTest):
 
         form_msgs = []
         if abs(torso_lean - self.IDEAL_LEAN) > self.LEAN_TOLERANCE:
-            form_msgs.append("Relax into a slight forward lean")
+            form_msgs.append("Optimize torso alignment (target 8° forward lean)")
         if not all(abs(elbow_angles[s] - self.ELBOW_TARGET) <= self.ELBOW_TOLERANCE for s in ("LEFT", "RIGHT")):
-            form_msgs.append("Swing your arms at ~90 degrees")
+            form_msgs.append("Maintain strict 90° sagittal arm swing")
         if self.live_cadence and self.live_cadence < self.CADENCE_TARGET - self.CADENCE_TOLERANCE:
-            form_msgs.append("Pick up your turnover")
+            form_msgs.append("Increase turnover cadence (target 170+ SPM)")
 
         if form_msgs:
             self.form_warnings += 1
             self.feedback = " | ".join(form_msgs)
         else:
-            self.feedback = f"Smooth stride! {remaining:.1f}s left"
+            self.feedback = f"Optimal stride mechanics. {remaining:.1f}s"
 
         if remaining <= 0 and not self.is_done:
             self.is_done = True
@@ -224,23 +213,15 @@ class RunningInPlaceTest(FitnessTest):
 
 
 class HighKneeTest(FitnessTest):
-    """10s high-knee test. Scoring is built from three things measured on
-    every rep:
-      - Lift distance: how close the knee gets to hip height, normalized by
-        the person's own thigh length (hip-to-knee distance measured while
-        the leg is extended), so it works at any distance from the camera.
-      - Elbow angle: how close the arm pump sits to an efficient ~90 degrees.
-      - Torso lean: how upright the back stays.
-    """
-
-    KNEE_UP_ANGLE = 110      # hip-knee-ankle angle below this = knee driven up (rep starts)
-    KNEE_DOWN_ANGLE = 160    # above this = leg extended again (rep cycle closes, score is finalized)
-    STANDING_ANGLE = 150     # above this we treat the leg as "resting" and recalibrate thigh length
-    TARGET_LIFT_RATIO = 0.9  # knee reaching ~90% of the way to hip height scores full marks
+    """10s high-knee test evaluating knee lift distance, hip flexion, and lumbar posture."""
+    KNEE_UP_ANGLE = 110      
+    KNEE_DOWN_ANGLE = 160    
+    STANDING_ANGLE = 150     
+    TARGET_LIFT_RATIO = 0.9  
     ELBOW_TARGET = 90.0
     ELBOW_TOLERANCE = 60.0
     TORSO_LEAN_LIMIT = 30.0
-    THIGH_REF_ALPHA = 0.15   # EMA smoothing for the self-calibrated thigh-length reference
+    THIGH_REF_ALPHA = 0.15   
 
     REQUIRED_LANDMARKS = [
         mp_pose.PoseLandmark.LEFT_SHOULDER.value, mp_pose.PoseLandmark.RIGHT_SHOULDER.value,
@@ -275,20 +256,20 @@ class HighKneeTest(FitnessTest):
         remaining = max(0.0, self.duration - elapsed)
 
         if self._avg_visibility(landmarks, self.REQUIRED_LANDMARKS) < self.MIN_VISIBILITY:
-            self.feedback = "Step back so your full body is visible"
+            self.feedback = "Step back so your full anatomical structure is visible"
             return self.quality_score, self.feedback
 
         L = mp_pose.PoseLandmark
-        pts = {}
-        for s in ("LEFT", "RIGHT"):
-            pts[s] = {
+        pts = {
+            s: {
                 "shoulder": get_xy(landmarks, getattr(L, f"{s}_SHOULDER")),
                 "hip": get_xy(landmarks, getattr(L, f"{s}_HIP")),
                 "knee": get_xy(landmarks, getattr(L, f"{s}_KNEE")),
                 "ankle": get_xy(landmarks, getattr(L, f"{s}_ANKLE")),
                 "elbow": get_xy(landmarks, getattr(L, f"{s}_ELBOW")),
                 "wrist": get_xy(landmarks, getattr(L, f"{s}_WRIST")),
-            }
+            } for s in ("LEFT", "RIGHT")
+        }
 
         knee_angles, elbow_angles = {}, {}
         for s in ("LEFT", "RIGHT"):
@@ -343,18 +324,19 @@ class HighKneeTest(FitnessTest):
 
         form_msgs = []
         if torso_lean > self.TORSO_LEAN_LIMIT:
-            form_msgs.append("Chest up, keep your back straight")
+            form_msgs.append("Maintain vertical torso; avoid lumbar flexion")
         if live_ratio < 0.5:
-            form_msgs.append("Drive those knees higher")
+            form_msgs.append("Incomplete hip flexion (drive knees to parallel)")
+        
         arm_ok = all(abs(elbow_angles[s] - self.ELBOW_TARGET) <= self.ELBOW_TOLERANCE for s in ("LEFT", "RIGHT"))
         if not arm_ok:
-            form_msgs.append("Pump your arms at ~90 degrees")
+            form_msgs.append("Engage contralateral arm drive")
 
         if form_msgs:
             self.form_warnings += 1
             self.feedback = " | ".join(form_msgs)
         else:
-            self.feedback = f"Great form! {remaining:.1f}s left"
+            self.feedback = f"Excellent triple-flexion coordination. {remaining:.1f}s"
 
         if remaining <= 0 and not self.is_done:
             self.is_done = True
@@ -380,21 +362,12 @@ class HighKneeTest(FitnessTest):
 
 
 class JumpTest(FitnessTest):
-    """Vertical jump test, scored on jump height distance.
-
-    Uses a short standing calibration window to learn the person's standing
-    hip-to-ankle leg length in the camera's normalized coordinates, then uses
-    that as a real-world ruler (assuming an average adult leg length) to
-    convert vertical foot displacement into approximate centimeters.
-    quality_score maps the best jump against a target height, so it reads on
-    the same 0-100 scale as the other events.
-    """
-
+    """Vertical countermovement jump test."""
     CALIBRATION_TIME = 2.0
     LEG_REFERENCE_CM = 90.0
     GROUND_TOLERANCE = 0.02
     MIN_JUMP_CM = 5.0
-    TARGET_JUMP_CM = 60.0   # a jump at/above this height scores full marks
+    TARGET_JUMP_CM = 60.0   
 
     REQUIRED_LANDMARKS = [
         mp_pose.PoseLandmark.LEFT_HIP.value, mp_pose.PoseLandmark.RIGHT_HIP.value,
@@ -434,14 +407,14 @@ class JumpTest(FitnessTest):
         leg_len = abs(avg_ankle_y - avg_hip_y)
 
         if elapsed < self.CALIBRATION_TIME:
-            self.feedback = f"Stand still — calibrating ({self.CALIBRATION_TIME - elapsed:.1f}s)"
+            self.feedback = f"Establishing anatomical baseline... ({self.CALIBRATION_TIME - elapsed:.1f}s)"
             self.baseline_ankle_y = avg_ankle_y
             self.baseline_leg_len = leg_len
             return self.quality_score, self.feedback
 
         if not self.calibrated:
             self.calibrated = True
-            self.feedback = "Calibrated — jump!"
+            self.feedback = "Baseline set. Execute maximum countermovement jump!"
 
         px_to_cm = (self.LEG_REFERENCE_CM / self.baseline_leg_len) if self.baseline_leg_len else 0.0
         displacement = self.baseline_ankle_y - avg_ankle_y
@@ -450,15 +423,16 @@ class JumpTest(FitnessTest):
         if displacement > self.GROUND_TOLERANCE:
             self.in_air = True
             self.current_jump_peak_cm = max(self.current_jump_peak_cm, displacement_cm)
-            self.feedback = f"Airborne — {displacement_cm:.0f} cm"
+            self.feedback = f"Flight phase... {displacement_cm:.0f} cm"
         else:
             if self.in_air and self.current_jump_peak_cm >= self.MIN_JUMP_CM:
                 self.last_jump_cm = self.current_jump_peak_cm
                 self.best_jump_cm = max(self.best_jump_cm, self.last_jump_cm)
                 self._record_rep(100 * clamp(self.last_jump_cm / self.TARGET_JUMP_CM, 0, 1))
-                self.feedback = f"Landed! {self.last_jump_cm:.0f} cm — best {self.best_jump_cm:.0f} cm"
+                self.feedback = f"Landing registered: {self.last_jump_cm:.0f} cm (Peak: {self.best_jump_cm:.0f} cm)"
             elif self.calibrated:
-                self.feedback = "Bend your knees and jump"
+                self.feedback = "Reset and hold for next jump phase"
+            
             self.in_air = False
             self.current_jump_peak_cm = 0.0
 
@@ -480,15 +454,12 @@ class JumpTest(FitnessTest):
 
 
 class PushUpTest(FitnessTest):
-    """Push-up test scored on depth (elbow bend) and body-line straightness
-    (no hip sag or piking). Works best with the camera angled to see enough
-    of a side profile that the shoulder-hip-ankle line is visible."""
-
-    DOWN_ELBOW_ANGLE = 100    # elbow angle below this = descending into a rep
-    UP_ELBOW_ANGLE = 160      # elbow angle above this = locked out at the top
-    FULL_DEPTH_ANGLE = 70.0   # elbow bent to this = full depth, scores max
+    """Push-up test scored on full eccentric depth (elbow flexion) and concentric lockout."""
+    DOWN_ELBOW_ANGLE = 100    
+    UP_ELBOW_ANGLE = 160      
+    FULL_DEPTH_ANGLE = 70.0   
     SHALLOW_DEPTH_ANGLE = 100.0
-    LINE_TOLERANCE = 35.0     # allowed deviation from a straight 180 degree body line
+    LINE_TOLERANCE = 35.0     
 
     REQUIRED_LANDMARKS = [
         mp_pose.PoseLandmark.LEFT_SHOULDER.value, mp_pose.PoseLandmark.RIGHT_SHOULDER.value,
@@ -516,9 +487,10 @@ class PushUpTest(FitnessTest):
         def pt(name, side):
             return get_xy(landmarks, getattr(L, f"{side}_{name}"))
 
-        elbow_angles = {}
-        for s in ("LEFT", "RIGHT"):
-            elbow_angles[s] = calculate_angle(pt("SHOULDER", s), pt("ELBOW", s), pt("WRIST", s))
+        elbow_angles = {
+            s: calculate_angle(pt("SHOULDER", s), pt("ELBOW", s), pt("WRIST", s)) 
+            for s in ("LEFT", "RIGHT")
+        }
         avg_elbow = (elbow_angles["LEFT"] + elbow_angles["RIGHT"]) / 2
 
         line_angles = [calculate_angle(pt("SHOULDER", s), pt("HIP", s), pt("ANKLE", s)) for s in ("LEFT", "RIGHT")]
@@ -539,15 +511,15 @@ class PushUpTest(FitnessTest):
             self.peak_min_elbow = min(self.peak_min_elbow, avg_elbow)
             if abs(180 - avg_line) > abs(180 - self.peak_line_angle):
                 self.peak_line_angle = avg_line
-            self.feedback = "Good depth — press up!" if abs(180 - avg_line) < self.LINE_TOLERANCE else "Keep your hips in line"
+            self.feedback = "Full eccentric depth. Initiate concentric drive!" if abs(180 - avg_line) < self.LINE_TOLERANCE else "Warning: Lumbar hyperextension (hips sagging)"
         elif avg_elbow > self.UP_ELBOW_ANGLE and self.stage == "down":
             self.stage = "up"
             self._score_rep(self.peak_min_elbow, self.peak_line_angle)
-            self.feedback = "Rep complete — nice lockout"
+            self.feedback = "Concentric lockout achieved."
             self.peak_min_elbow = 180.0
             self.peak_line_angle = 180.0
         elif self.stage == "up":
-            self.feedback = "Lower down with control"
+            self.feedback = "Control the eccentric descent."
 
         return self.quality_score, self.feedback
 
@@ -567,14 +539,10 @@ class PushUpTest(FitnessTest):
 
 
 class PlankTest(FitnessTest):
-    """Timed plank hold, scored on how straight the body line stays
-    (shoulder-hip-ankle angle close to 180 degrees) and how steady the hips
-    stay (low wobble) over the hold. Graded once per second rather than per
-    rep, since a plank has no discrete reps."""
-
+    """Timed plank hold, tracking isometric stability and pelvic tilt."""
     LINE_TOLERANCE = 35.0
-    SAMPLE_INTERVAL = 1.0      # seconds between graded samples
-    STABILITY_WINDOW = 15      # number of recent hip-height readings kept
+    SAMPLE_INTERVAL = 1.0      
+    STABILITY_WINDOW = 15      
     STABILITY_TOLERANCE = 0.015
 
     REQUIRED_LANDMARKS = [
@@ -616,17 +584,18 @@ class PlankTest(FitnessTest):
 
         avg_hip_y = (pt("HIP", "LEFT")[1] + pt("HIP", "RIGHT")[1]) / 2
         self.hip_y_history.append(avg_hip_y)
+        
         if len(self.hip_y_history) > self.STABILITY_WINDOW:
             self.hip_y_history.pop(0)
+            
         wobble = float(np.std(self.hip_y_history)) if len(self.hip_y_history) >= 3 else 0.0
-
         line_score = 100 * max(0.0, 1 - abs(180 - avg_line) / self.LINE_TOLERANCE)
         self.live_form_pct = line_score
 
         if abs(180 - avg_line) > self.LINE_TOLERANCE * 0.6:
-            self.feedback = "Straighten your line — don't let your hips sag or pike"
+            self.feedback = "Correct pelvic tilt: maintain rigid neutral spine"
         else:
-            self.feedback = f"Solid hold! {remaining:.1f}s left"
+            self.feedback = f"Optimal isometric core stability. {remaining:.1f}s"
 
         now = time.time()
         if now - self.last_sample_time >= self.SAMPLE_INTERVAL:
@@ -645,7 +614,7 @@ class PlankTest(FitnessTest):
         elapsed = 0.0 if self.start_time is None else time.time() - self.start_time
         return {
             "angles": self.last_angles,
-            "reps": self.reps,  # number of graded 1s samples — shown as "checks" in the UI
+            "reps": self.reps,  
             "form_pct": round(self.live_form_pct, 1),
             "time_remaining": round(max(0.0, self.duration - elapsed), 1),
         }
@@ -665,6 +634,10 @@ class LiveState:
     def __init__(self):
         self._lock = threading.Lock()
         self.is_streaming = False
+        self.stream_active = False
+        self.camera_error = False
+        self.last_client_ping = time.time()
+        
         self.active_test = None
         self.test_name = "none"
         self.current_score = 0
@@ -672,25 +645,27 @@ class LiveState:
         self.current_extra = {}
         self.is_done = False
 
+    def ping(self):
+        """Acknowledges the frontend is still actively connected."""
+        self.last_client_ping = time.time()
+
     def set_test(self, test_name):
         with self._lock:
             self.test_name = test_name
             self.current_score = 0
-            self.current_feedback = "Press Start when you're ready"
+            self.current_feedback = "System ready. Awaiting manual start."
             self.current_extra = {}
             self.is_done = False
             factory = TEST_REGISTRY.get(test_name)
             self.active_test = factory() if factory else None
 
     def start_test(self):
-        """Explicitly begins the currently-armed test (Start button)."""
         with self._lock:
             if self.active_test:
                 self.active_test.start()
                 self.current_feedback = self.active_test.feedback
 
     def restart_test(self):
-        """Resets the current test back to its unstarted state (Restart button)."""
         with self._lock:
             name = self.test_name
         self.set_test(name)
@@ -703,6 +678,7 @@ class LiveState:
                 "feedback": self.current_feedback,
                 "done": self.is_done,
                 "started": bool(self.active_test.started) if self.active_test else False,
+                "camera_error": self.camera_error
             }
             payload.update(self.current_extra)
             return payload
@@ -711,55 +687,63 @@ class LiveState:
 live_state = LiveState()
 
 
-def _draw_hud(frame, score, feedback, warn):
-    pass
-
-
 def generate_live_stream():
+    """Generator providing JPEG frames of the webcam with overlaid MediaPipe tracking."""
     live_state.is_streaming = True
+    live_state.stream_active = True
+    live_state.camera_error = False
+    
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    
     cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        live_state.camera_error = True
+        live_state.is_streaming = False
+        live_state.stream_active = False
+        return
 
     try:
         while cap.isOpened() and live_state.is_streaming:
-            ret, frame = cap.read()
-            if not ret:
+            # AUTO-KILL: If the frontend has vanished (e.g. page refresh), abort the camera loop
+            if time.time() - live_state.last_client_ping > 4.0:
+                print("Client disconnected. Releasing camera hardware.")
                 break
 
-            frame = cv2.flip(frame, 1)  # mirror so it feels natural to the user
+            ret, frame = cap.read()
+            if not ret:
+                live_state.camera_error = True
+                break
+
+            frame = cv2.flip(frame, 1)  
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb_frame)
 
+            # Keep execution thread-safe inside the lock to avoid test swapping mid-calculation
             with live_state._lock:
                 test = live_state.active_test
-
-            warn = False
-            if results.pose_landmarks and test and not test.is_done:
-                score, feedback = test.process_frame(results.pose_landmarks.landmark, frame.shape)
-                warn = ("|" in feedback) or ("Step back" in feedback) or ("still" in feedback.lower()) or ("Make sure" in feedback)
-
-                with live_state._lock:
+                
+                if results.pose_landmarks and test and not test.is_done:
+                    score, feedback = test.process_frame(results.pose_landmarks.landmark, frame.shape)
+                    
                     live_state.current_score = score
                     live_state.current_feedback = feedback
                     live_state.current_extra = test.snapshot_extra()
                     live_state.is_done = test.is_done
 
-                mp_drawing.draw_landmarks(
-                    frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
-                )
-            elif not results.pose_landmarks:
-               pass
-
-            with live_state._lock:
-                disp_score = live_state.current_score
-                disp_msg = live_state.current_feedback
-
-            _draw_hud(frame, disp_score, disp_msg, warn)
+                    mp_drawing.draw_landmarks(
+                        frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                        landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
+                    )
 
             ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not ret:
+                continue
+                
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            
     finally:
         cap.release()
         pose.close()
+        live_state.stream_active = False
         live_state.is_streaming = False
