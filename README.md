@@ -5,8 +5,10 @@ To run this app, you must use python versions 3.9-3.12 (3.9.13 is the one that w
 
 After installing this, you can create a venv to store the requirements `py -3.9 -m venv venv` (recommended) or do it on your global python save.
 
-If you did the venv route, do these next to activate your venv:
+### If you did the venv route, do these next to activate your venv:
+
 Windows - `venv\Scripts\activate`
+
 Mac/Linux - `source venv/bin/activate`
 
 You must run `pip install -r requirements.txt` to install required modules.
