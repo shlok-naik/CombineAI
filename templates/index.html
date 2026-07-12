@@ -277,7 +277,7 @@
       <section class="stage">
         <div class="video-frame">
           <img id="webcamFeed" src="/video_feed" alt="Live camera feed with pose overlay">
-          <video id="replayVideo" class="hidden" controls loop playsinline></video>
+          <video id="replayVideo" class="hidden" controls playsinline></video>
           <div class="drop-zone hidden" id="dropZone">
             <input type="file" id="videoFileInput" accept="video/*" class="hidden">
             <div class="drop-zone-icon">&#8593;</div>
@@ -407,6 +407,7 @@
   let localPreviewUrl = null;
   let lastKnownSnapshot = null;
   let currentReplayFilename = null; // server-side annotated video, if any, from the last upload
+  let hasAutoPausedReplay = false; // ensures the "pause when test ends" logic only fires once per replay
 
   // Realtime Timer variables
   let localTimeRemaining = 0;
@@ -532,6 +533,9 @@
     document.getElementById('formLog').innerHTML = '<div class="empty-log-state">Log clean. Awaiting activity analysis...</div>';
     lastFeedbackStr = "";
     lastSystemAlertKey = "";
+    pendingTipKey = "";
+    pendingTipSince = 0;
+    pendingTipMistakeFrame = null;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[currentMode] || 'reps'} · Score: 0`;
   }
@@ -801,6 +805,7 @@
     isUploadProcessing = true;
     uploadTimeline = [];
     uploadTimelineIdx = 0;
+    hasAutoPausedReplay = false;
 
     // Done with any previously processed replay — delete it server-side so
     // annotated clips don't pile up in static/uploads.
@@ -889,6 +894,16 @@
     renderTelemetry(entry);
     document.getElementById('hudTimer').textContent =
       typeof entry.time_remaining === 'number' ? entry.time_remaining.toFixed(1) + 's' : '--';
+
+    // Once the timed test window ends, stop playback right there instead of
+    // continuing on with trailing footage and a frozen/stale score. Only
+    // auto-pause once, so the user can still manually resume afterward
+    // without it immediately re-pausing on the next tick.
+    if (entry.done && !hasAutoPausedReplay) {
+      hasAutoPausedReplay = true;
+      replay.pause();
+      document.getElementById('systemStatus').textContent = "Test complete — replay paused.";
+    }
   }
 
   function initUploadDropZone() {
@@ -952,6 +967,14 @@
     return text.replace(/[\d.]+/g, '#').trim();
   }
 
+  // Cuts a possibly multi-issue, detail-heavy feedback string down to just
+  // the single most critical point, stripped of parenthetical detail — so
+  // spoken tips stay short instead of running long and getting cut off by
+  // the next one.
+  function shortenForSpeech(text) {
+    return text.split('|')[0].replace(/\s*\([^)]*\)/g, '').trim();
+  }
+
   function speakFeedback(text) {
     if (!speechEnabled || !('speechSynthesis' in window) || !text) return;
     window.speechSynthesis.cancel(); // interrupt any stale utterance so speech stays current
@@ -959,6 +982,16 @@
     utterance.rate = 1.05;
     window.speechSynthesis.speak(utterance);
   }
+
+  // Pose-estimation jitter makes which form issues are "active" flicker
+  // frame to frame, so the feedback string can change almost every poll
+  // even when nothing real has changed. A tip only counts once its key has
+  // stayed the same for TIP_SETTLE_MS straight — filters that flicker so
+  // only genuinely sustained issues become a logged/spoken tip.
+  const TIP_SETTLE_MS = 1200;
+  let pendingTipKey = "";
+  let pendingTipSince = 0;
+  let pendingTipMistakeFrame = null;
 
   // Shared renderer for both live polling and replay-timeline playback:
   // HUD counters, feedback banner, form log, gauges and distance/jump meters.
@@ -990,31 +1023,50 @@
       fbEl.className = "hud hud-bottom";
     }
 
-    // Form Log Scroll Update
-    if (feedbackText && feedbackKey !== lastFeedbackStr && isFormCoaching && !isSystemAlert) {
-      lastFeedbackStr = feedbackKey;
-      speakFeedback(feedbackText);
-      const logBox = document.getElementById('formLog');
+    // Form Log / Tip Update — require the issue to hold steady for
+    // TIP_SETTLE_MS before it's treated as a real tip, so a single noisy
+    // frame doesn't fire off a new (and possibly spoken) log entry.
+    if (feedbackText && isFormCoaching && !isSystemAlert) {
+      if (feedbackKey !== pendingTipKey) {
+        pendingTipKey = feedbackKey;
+        pendingTipSince = Date.now();
+        pendingTipMistakeFrame = data.mistake_frame || null;
+      } else {
+        // mistake_frame is a one-shot payload tied to the moment the issue
+        // was first detected — grab it whenever it shows up during the
+        // settle window, since by the time we actually commit the tip the
+        // server will have already stopped re-sending it.
+        if (data.mistake_frame) pendingTipMistakeFrame = data.mistake_frame;
 
-      if (logBox.querySelector('.empty-log-state')) { logBox.innerHTML = ''; }
+        if (feedbackKey !== lastFeedbackStr && Date.now() - pendingTipSince >= TIP_SETTLE_MS) {
+          lastFeedbackStr = feedbackKey;
+          const isNegativeForm = /warning|incomplete|avoid|loss|sagging/i.test(feedbackText);
+          // Only speak actual mistakes, kept short — positive/neutral coaching
+          // confirmations still show in the log but stay silent so the voice
+          // coach isn't constantly narrating every clean rep.
+          if (isNegativeForm) speakFeedback(shortenForSpeech(feedbackText));
+          const logBox = document.getElementById('formLog');
 
-      const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
-      const isNegativeForm = /warning|incomplete|avoid|loss|sagging/i.test(feedbackText);
-      const thumbHtml = (isNegativeForm && data.mistake_frame)
-        ? `<img class="log-frame-thumb" src="${data.mistake_frame}" alt="Frame showing the form issue">`
-        : '';
+          if (logBox.querySelector('.empty-log-state')) { logBox.innerHTML = ''; }
 
-      const logRow = document.createElement('div');
-      logRow.className = `log-item ${isNegativeForm ? '' : 'good'}`;
-      logRow.innerHTML = `
-        <div>
-          <span class="log-time">[T-${timestamp}]</span>
-          <span>${feedbackText}</span>
-        </div>
-        ${thumbHtml}
-      `;
-      logBox.appendChild(logRow);
-      logBox.scrollTop = logBox.scrollHeight;
+          const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
+          const thumbHtml = (isNegativeForm && pendingTipMistakeFrame)
+            ? `<img class="log-frame-thumb" src="${pendingTipMistakeFrame}" alt="Frame showing the form issue">`
+            : '';
+
+          const logRow = document.createElement('div');
+          logRow.className = `log-item ${isNegativeForm ? '' : 'good'}`;
+          logRow.innerHTML = `
+            <div>
+              <span class="log-time">[T-${timestamp}]</span>
+              <span>${feedbackText}</span>
+            </div>
+            ${thumbHtml}
+          `;
+          logBox.appendChild(logRow);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+      }
     }
 
     // UI Updates based on event mode
