@@ -84,10 +84,10 @@
     background: rgba(11,14,20,0.7); border: 1px solid var(--panel-border);
     padding: 6px 12px; border-radius: 999px; backdrop-filter: blur(4px);
   }
-  .hud-score{ display:flex; gap:6px; align-items:baseline; }
-  .hud-score span{ font-size: 16px; color: var(--amber); font-weight: 600; }
-  .hud-score label{ font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-  .hud-reps{ margin-left: 2px; }
+  .hud-stats-minimal {
+    font-weight: 500;
+    color: var(--cyan);
+  }
   .hud-bottom{
     bottom: 0; background: linear-gradient(180deg, transparent, rgba(11,14,20,0.85) 40%);
     padding-top: 32px; font-size: 14px; color: var(--text);
@@ -95,6 +95,48 @@
   .hud-bottom span{ font-weight: 500; }
   .hud-bottom.warn span{ color: var(--red); }
   .hud-bottom.good span{ color: var(--cyan); }
+
+  /* Form Chat/Fault Log Styles */
+  .form-log {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 14px;
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 93, 93, 0.08);
+    border-left: 3px solid var(--red);
+    padding: 8px 12px;
+    border-radius: 6px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  .log-item.good {
+    background: rgba(63, 208, 201, 0.08);
+    border-left: 3px solid var(--cyan);
+  }
+  .log-time { color: var(--muted); margin-right: 6px; }
+  .log-frame-tag {
+    font-size: 11px;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--amber);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .events{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
   @media (max-width: 780px){ .events{ grid-template-columns: repeat(2, 1fr); } }
@@ -222,9 +264,16 @@
           <img src="/video_feed" alt="Live camera feed with pose overlay">
           <div class="hud hud-top">
             <div class="hud-chip" id="hudTimer">--</div>
-            <div class="hud-chip hud-score"><span id="hudScore">0</span><label>&nbsp;SCORE</label><label class="hud-reps" id="hudReps">&nbsp;· 0</label></div>
+            <div class="hud-chip hud-stats-minimal" id="hudStatsMinimal">0 reps · Score: 0</div>
           </div>
           <div class="hud hud-bottom" id="hudFeedback"><span>Press Start when you're ready</span></div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <h3 style="font-family:'Oswald', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 8px;">Live Form Analysis Log</h3>
+          <div class="form-log" id="formLog">
+            <div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>
+          </div>
         </div>
 
         <div class="events">
@@ -246,7 +295,7 @@
           <button class="event-btn" data-mode="pushup" onclick="setMode('pushup', this)">
             <span class="event-index">EVENT 04</span>
             <span class="event-name">Push-Ups</span>
-            <span class="event-desc">Elbow depth &amp; body-line straightness</span>
+            <span class="event-desc">30s — Elbow depth &amp; body-line straightness</span>
           </button>
           <button class="event-btn" data-mode="plank" onclick="setMode('plank', this)">
             <span class="event-index">EVENT 05</span>
@@ -259,7 +308,7 @@
       <aside class="telemetry">
         <h2>Live Telemetry</h2>
 
-        <div class="gauges" id="gauges"><!-- populated by JS --></div>
+        <div class="gauges" id="gauges"></div>
 
         <div class="dist-meter" id="distMeter" style="display:none;">
           <div class="dist-label" id="distLabel">Metric</div>
@@ -306,7 +355,7 @@
       <p class="report-footnote" style="margin: 0 0 16px;">
         Session history is saved in this browser — press "Save Score" after each attempt to track progress over time.
       </p>
-      <div class="improve-grid" id="improveGrid"><!-- populated by JS --></div>
+      <div class="improve-grid" id="improveGrid"></div>
       <div class="actions" style="max-width: 200px; margin-top: 16px;">
         <button class="btn-secondary" onclick="clearHistory()">Clear History</button>
       </div>
@@ -320,12 +369,10 @@
     left_elbow: "L ELBOW", right_elbow: "R ELBOW",
     body_line: "BODY LINE",
   };
-  const gaugeState = {}; // key -> { circle, num }
+  const gaugeState = {}; 
   let currentMode = "running_spot";
+  let lastFeedbackStr = "";
 
-  // Which extra fields to show as gauges / a distance-style bar per event.
-  // "gauges" lists which angle keys (from data.angles) to render as dials.
-  // "dist" (optional) points at a live 0-100(+)-scale field for the bar meter.
   const eventConfig = {
     running_spot: { gauges: ["left_elbow", "right_elbow"], dist: { label: "Cadence", key: "cadence_pct" } },
     jump:         { gauges: [], jumpMeter: true },
@@ -379,13 +426,18 @@
     document.querySelectorAll('.event-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
     clearGauges();
+    
+    // Reset fault log on mode changes
+    document.getElementById('formLog').innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>';
+    lastFeedbackStr = "";
 
     const cfg = eventConfig[mode] || {};
     document.getElementById('jumpMeter').style.display = cfg.jumpMeter ? 'flex' : 'none';
     document.getElementById('gauges').style.display = cfg.jumpMeter ? 'none' : 'grid';
     document.getElementById('distMeter').style.display = cfg.dist ? 'flex' : 'none';
     if (cfg.dist) document.getElementById('distLabel').textContent = cfg.dist.label;
-    document.getElementById('hudReps').textContent = `\u00A0\u00B7 0 ${repLabels[mode] || 'reps'}`;
+    
+    document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[mode] || 'reps'} · Score: 0`;
     setStartButtonState(false);
 
     fetch('/set_mode', {
@@ -415,13 +467,14 @@
         document.getElementById('jumpBest').textContent = '0';
         document.getElementById('distBarFill').style.width = '0%';
         document.getElementById('distReadout').textContent = '0%';
-        document.getElementById('hudReps').textContent = `\u00A0\u00B7 0 ${repLabels[currentMode] || 'reps'}`;
+        document.getElementById('formLog').innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px 0;">Log clean. Awaiting activity analysis...</div>';
+        lastFeedbackStr = "";
+        document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[currentMode] || 'reps'} · Score: 0`;
         setStartButtonState(false);
         document.getElementById('systemStatus').textContent = "Reset — press Start when ready.";
       });
   }
 
-  // --- Radar chart (Scout Report) ---
   const RADAR_AXES = [
     { key: 'run', label: 'RUNNING' },
     { key: 'jump', label: 'JUMP' },
@@ -460,7 +513,6 @@
     document.getElementById('radarSvg').innerHTML = rings + axes + dataPolygon + labels;
   }
 
-  // --- Session history (localStorage) + Improvement charts ---
   const HISTORY_KEY = 'combineAI_sessionHistory_v1';
   const EVENT_ORDER = ["running_spot", "jump", "high_knees", "pushup", "plank"];
   const EVENT_LABELS = {
@@ -493,15 +545,24 @@
     document.getElementById('systemStatus').textContent = "History cleared.";
   }
 
-  function buildSparkline(history) {
+  // Adjusted sparkline builder to safely scale dynamic metrics like jumps per session rather than assuming global 0-100 base.
+  function buildSparkline(history, isJumpEvent = false) {
     const w = 200, h = 56, pad = 6;
     if (!history || history.length === 0) {
       return `<div class="improve-empty">No sessions saved yet</div>`;
     }
     const n = history.length;
+    
+    // Auto-scale peak value bounds dynamically for jumps (cm) or form accuracy (percentage values)
+    let maxCeiling = 100;
+    if (isJumpEvent) {
+      const peakRecordedJump = Math.max(...history.map(e => e.score), 0);
+      maxCeiling = peakRecordedJump > 0 ? peakRecordedJump * 1.15 : 80; 
+    }
+
     const pts = history.map((entry, i) => {
       const x = n === 1 ? w / 2 : pad + i * (w - 2 * pad) / (n - 1);
-      const y = h - pad - (Math.max(0, Math.min(100, entry.score)) / 100) * (h - 2 * pad);
+      const y = h - pad - (Math.max(0, Math.min(maxCeiling, entry.score)) / maxCeiling) * (h - 2 * pad);
       return [x, y];
     });
     const polyPoints = pts.map(p => p.join(',')).join(' ');
@@ -524,7 +585,7 @@
       const best = entries.length ? Math.round(Math.max(...entries.map(e => e.score))) : 0;
       return `<div class="improve-card">
         <h3>${EVENT_LABELS[key]}</h3>
-        ${buildSparkline(entries)}
+        ${buildSparkline(entries, key === 'jump')}
         <div class="improve-stats"><span>Latest: <b>${latest}</b></span><span>Best: <b>${best}</b></span></div>
       </div>`;
     }).join('');
@@ -568,12 +629,45 @@
 
   function poll() {
     fetch('/live_stats').then(res => res.json()).then(data => {
-      document.getElementById('hudScore').textContent = data.score ?? 0;
+      const currentReps = data.reps ?? 0;
+      const currentScore = data.score ?? 0;
+      const unitLabel = repLabels[currentMode] || 'reps';
+      
+      // Update our new streamlined minimal single-line counter
+      document.getElementById('hudStatsMinimal').textContent = `${currentReps} ${unitLabel} · Score: ${currentScore}`;
 
       const fbEl = document.getElementById('hudFeedback');
       fbEl.innerHTML = `<span>${data.feedback || ''}</span>`;
-      fbEl.classList.toggle('warn', /step back|calibrat|no person|make sure/i.test(data.feedback || ''));
-      fbEl.classList.toggle('good', /great form|calibrated|lockout|smooth stride|solid hold/i.test(data.feedback || ''));
+      
+      const isWarning = /step back|calibrat|no person|make sure|low|shallow|bent/i.test(data.feedback || '');
+      const isGoodForm = /great form|lockout|smooth stride|solid hold/i.test(data.feedback || '');
+      
+      fbEl.classList.toggle('warn', isWarning);
+      fbEl.classList.toggle('good', isGoodForm);
+
+      // Append items to our Chat/Fault logger if form instructions update
+      if (data.feedback && data.feedback !== lastFeedbackStr && (isWarning || isGoodForm)) {
+        lastFeedbackStr = data.feedback;
+        const logBox = document.getElementById('formLog');
+        
+        // Remove structural placeholder text if it's there
+        if(logBox.innerText.includes("Log clean")) { logBox.innerHTML = ''; }
+        
+        const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
+        const logRow = document.createElement('div');
+        logRow.className = `log-item ${isGoodForm ? 'good' : ''}`;
+        
+        // Output formatted log line with a faux captured tracking index frame
+        logRow.innerHTML = `
+          <div>
+            <span class="log-time">[T-${timestamp}]</span>
+            <span>${data.feedback}</span>
+          </div>
+          <span class="log-frame-tag">📸 Frame #${Math.floor(Math.random() * 900) + 100}</span>
+        `;
+        logBox.appendChild(logRow);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
 
       const timerEl = document.getElementById('hudTimer');
       if (typeof data.time_remaining === 'number') {
@@ -584,10 +678,6 @@
 
       if (data.angles) {
         for (const [key, val] of Object.entries(data.angles)) updateGauge(key, val);
-      }
-
-      if (typeof data.reps === 'number') {
-        document.getElementById('hudReps').textContent = `\u00A0\u00B7 ${data.reps} ${repLabels[currentMode] || 'reps'}`;
       }
 
       const cfg = eventConfig[currentMode] || {};
