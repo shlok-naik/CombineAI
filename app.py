@@ -10,6 +10,7 @@ from detector import (
     generate_live_stream, live_state, TEST_REGISTRY, process_video_file,
     get_required_duration, get_video_duration_seconds,
 )
+from benchmarks import build_profile
 
 app = Flask(__name__)
 
@@ -197,49 +198,34 @@ def save_score():
 
 @app.route('/generate_profile', methods=['GET'])
 def generate_profile():
-    """Generates an athletic profile based on saved metrics."""
-    run_score = user_stats["running_spot"]["score"]
-    knee_score = user_stats["high_knees"]["score"]
-    jump_score = user_stats["jump"]["score"]
+    """Generates an athletic profile: best-fit sport (weighted across all
+    five tests), a specific position within that sport, a player archetype
+    built from the athlete's standout metric, and a percentile rank for
+    each test against approximate population benchmarks."""
+    metrics = {
+        "running_spot": user_stats["running_spot"]["score"],
+        "high_knees": user_stats["high_knees"]["score"],
+        "jump": user_stats["jump"]["score"],
+        "pushup": user_stats["pushup"]["score"],
+        "plank": user_stats["plank"]["score"],
+    }
     jump_cm = user_stats["jump"]["best_cm"]
-    pushup_score = user_stats["pushup"]["score"]
-    plank_score = user_stats["plank"]["score"]
 
-    scores = [run_score, knee_score, jump_score, pushup_score, plank_score]
-    any_data = any(s > 0 for s in scores)
-
-    recommended_sport = "General Athlete"
-    traits = ["Adaptive Athlete"]
-
-    # Trait logic tree
-    if pushup_score >= 75 and plank_score >= 75 and knee_score >= 70:
-        recommended_sport = "Multi-Sport / Combine All-Rounder"
-        traits = ["Complete Athletic Profile", "Strong Core-to-Power Transfer"]
-    elif jump_score >= 80:
-        recommended_sport = "Basketball / Volleyball"
-        traits = ["Elite Vertical Explosiveness", "Fast-Twitch Dominant"]
-    elif run_score >= 80 and knee_score >= 70:
-        recommended_sport = "Sprinting / Soccer"
-        traits = ["Efficient Running Form", "High Cadence", "Agile Core"]
-    elif pushup_score >= 80:
-        recommended_sport = "Football (Line) / Combat Sports"
-        traits = ["Elite Upper-Body Power", "Strong Pressing Strength"]
-    elif plank_score >= 80:
-        recommended_sport = "Gymnastics / CrossFit"
-        traits = ["Elite Core Stability", "Excellent Body Control"]
-    elif any_data:
-        recommended_sport = "Developing Prospect"
-        traits = ["Active Foundation", "Building Motor Skills"]
+    profile = build_profile(metrics, jump_cm)
 
     return jsonify({
-        "sport": recommended_sport,
-        "skills": traits,
-        "run_stat": run_score,
-        "knee_stat": knee_score,
+        "sport": profile["sport"],
+        "position": profile["position"],
+        "archetype": profile["archetype"],
+        "archetype_desc": profile["archetype_desc"],
+        "skills": profile["skills"],
+        "run_stat": metrics["running_spot"],
+        "knee_stat": metrics["high_knees"],
         "jump_stat": jump_cm,
-        "jump_score": jump_score,
-        "pushup_stat": pushup_score,
-        "plank_stat": plank_score,
+        "jump_score": metrics["jump"],
+        "pushup_stat": metrics["pushup"],
+        "plank_stat": metrics["plank"],
+        "percentiles": profile["percentiles"],
     })
 
 

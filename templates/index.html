@@ -120,6 +120,10 @@
   }
   .log-item.good { background: rgba(63, 208, 201, 0.08); border-left: 3px solid var(--cyan); }
   .log-time { color: var(--muted); margin-right: 6px; }
+  .log-frame-thumb {
+    width: 64px; height: 48px; object-fit: cover; border-radius: 6px;
+    border: 1px solid var(--panel-border); flex-shrink: 0; margin-left: 10px;
+  }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
   /* Event Grid */
@@ -184,18 +188,27 @@
   }
   .report h2 { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px; }
   .report .sport { color: var(--amber); font-size: 20px; font-weight: 600; }
+  .report .position { color: var(--cyan); font-size: 14px; margin-top: 4px; }
+  .archetype-box {
+    margin: 14px 0; padding: 12px 14px; background: var(--bg);
+    border: 1px solid var(--panel-border); border-radius: 10px;
+  }
+  .archetype-name { font-family: 'Oswald', sans-serif; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--amber); }
+  .archetype-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
   .traits { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 20px; }
   .trait-tag {
     font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan);
     border: 1px solid rgba(63,208,201,0.4); padding: 4px 10px; border-radius: 999px;
   }
-  
+
   .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
   @media (max-width: 780px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
   .stat-box { background: var(--bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px; text-align: center; }
   .stat-box .num { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--text); }
   .stat-box .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .stat-box .pctl { font-size: 10px; color: var(--cyan); margin-top: 4px; }
   .report-footnote { font-size: 11px; color: var(--muted); margin-top: 18px; }
+  #pdfExportBtn { margin-top: 16px; }
 
   /* Radar */
   .radar-wrap { display: flex; justify-content: center; margin: 4px 0 22px; }
@@ -207,6 +220,34 @@
   
   .empty-log-state { color: var(--muted); text-align: center; padding: 20px 0; }
   .hidden { display: none !important; }
+
+  /* PDF export: print only the report card, on a plain white page.
+     No external library — the browser's native "Save as PDF" print
+     destination handles the actual export, so this works offline. */
+  @media print {
+    body * { visibility: hidden; }
+    #profileCard, #profileCard * { visibility: visible; }
+    #profileCard {
+      display: block !important;
+      position: absolute; left: 0; top: 0; width: 100%;
+      background: #fff !important; color: #111 !important;
+      border: none !important; box-shadow: none !important; padding: 24px !important;
+    }
+    #profileCard .sport { color: #b8720f !important; }
+    #profileCard .position { color: #0a7d76 !important; }
+    #profileCard .archetype-box { background: #f4f4f4 !important; border-color: #ccc !important; }
+    #profileCard .archetype-name { color: #b8720f !important; }
+    #profileCard .archetype-desc, #profileCard .report-footnote { color: #444 !important; }
+    #profileCard .trait-tag { color: #0a7d76 !important; border-color: #0a7d76 !important; }
+    #profileCard .stat-box { background: #f4f4f4 !important; border: 1px solid #ccc !important; }
+    #profileCard .stat-box .num { color: #111 !important; }
+    #profileCard .stat-box .lbl { color: #555 !important; }
+    #profileCard .stat-box .pctl { color: #0a7d76 !important; }
+    #profileCard .radar-ring, #profileCard .radar-axis { stroke: #ccc !important; }
+    #profileCard .radar-fill { fill: #0a7d76 !important; fill-opacity: 0.25 !important; stroke: #0a7d76 !important; }
+    #profileCard .radar-label { fill: #333 !important; }
+    #pdfExportBtn { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -313,6 +354,7 @@
           <button class="btn-primary" id="startBtn" onclick="toggleTest()">Start</button>
           <button class="btn-secondary" onclick="saveCurrentScore()">Log Session Score</button>
           <button class="btn-secondary" onclick="generateProfile()">Generate Scout Report</button>
+          <button class="btn-secondary btn-small" id="voiceToggleBtn" onclick="toggleVoice()">🔊 Voice Coaching: On</button>
         </div>
 
         <div class="status" id="systemStatus">System ready.</div>
@@ -322,16 +364,22 @@
     <section class="report" id="profileCard">
       <h2>Official Scout Report</h2>
       <div class="sport" id="sportRec"></div>
+      <div class="position" id="positionRec"></div>
+      <div class="archetype-box">
+        <div class="archetype-name" id="archetypeName"></div>
+        <div class="archetype-desc" id="archetypeDesc"></div>
+      </div>
       <div class="traits" id="traits"></div>
       <div class="radar-wrap"><svg id="radarSvg" viewBox="0 0 240 240"></svg></div>
       <div class="stat-row">
-        <div class="stat-box"><div class="num" id="runStat">0</div><div class="lbl">Running Form /100</div></div>
-        <div class="stat-box"><div class="num" id="jumpStat">0</div><div class="lbl">Best Jump (cm)</div></div>
-        <div class="stat-box"><div class="num" id="kneeStat">0</div><div class="lbl">High Knees /100</div></div>
-        <div class="stat-box"><div class="num" id="pushupStat">0</div><div class="lbl">Push-Ups /100</div></div>
-        <div class="stat-box"><div class="num" id="plankStat">0</div><div class="lbl">Plank /100</div></div>
+        <div class="stat-box"><div class="num" id="runStat">0</div><div class="lbl">Running Form /100</div><div class="pctl" id="runPctl"></div></div>
+        <div class="stat-box"><div class="num" id="jumpStat">0</div><div class="lbl">Best Jump (cm)</div><div class="pctl" id="jumpPctl"></div></div>
+        <div class="stat-box"><div class="num" id="kneeStat">0</div><div class="lbl">High Knees /100</div><div class="pctl" id="kneePctl"></div></div>
+        <div class="stat-box"><div class="num" id="pushupStat">0</div><div class="lbl">Push-Ups /100</div><div class="pctl" id="pushupPctl"></div></div>
+        <div class="stat-box"><div class="num" id="plankStat">0</div><div class="lbl">Plank /100</div><div class="pctl" id="plankPctl"></div></div>
       </div>
-      <p class="report-footnote">Screenshot this and send it to your coach.</p>
+      <p class="report-footnote">Percentiles are estimated against general population benchmarks.</p>
+      <button class="btn-secondary" id="pdfExportBtn" onclick="window.print()">Export Report as PDF</button>
     </section>
   </div>
 
@@ -346,8 +394,10 @@
   const gaugeState = {}; 
   let currentMode = "running_spot";
   let lastFeedbackStr = "";
+  let lastSystemAlertKey = "";
   let isTestRunning = false;
   let pollTimeout = null;
+  let speechEnabled = true;
 
   // Upload-instead-of-webcam mode
   let sourceMode = "webcam"; // "webcam" | "upload"
@@ -435,6 +485,12 @@
     }
   }
 
+  function toggleVoice() {
+    speechEnabled = !speechEnabled;
+    document.getElementById('voiceToggleBtn').textContent = speechEnabled ? '🔊 Voice Coaching: On' : '🔇 Voice Coaching: Off';
+    if (!speechEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+
   // --- API Calls & Core Logic ---
   function toggleTest() {
     if (!isTestRunning) {
@@ -475,6 +531,8 @@
     document.getElementById('distReadout').textContent = '0%';
     document.getElementById('formLog').innerHTML = '<div class="empty-log-state">Log clean. Awaiting activity analysis...</div>';
     lastFeedbackStr = "";
+    lastSystemAlertKey = "";
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     document.getElementById('hudStatsMinimal').textContent = `0 ${repLabels[currentMode] || 'reps'} · Score: 0`;
   }
 
@@ -572,6 +630,23 @@
       }).catch(err => console.error("Error saving score:", err));
   }
 
+  // Converts 73 -> "73rd", 81 -> "81st", 92 -> "92nd", etc.
+  function ordinal(n) {
+    const rem100 = n % 100;
+    if (rem100 >= 11 && rem100 <= 13) return n + 'th';
+    switch (n % 10) {
+      case 1: return n + 'st';
+      case 2: return n + 'nd';
+      case 3: return n + 'rd';
+      default: return n + 'th';
+    }
+  }
+
+  function setPercentileText(elId, value) {
+    document.getElementById(elId).textContent =
+      (typeof value === 'number') ? `${ordinal(Math.round(value))} percentile` : '';
+  }
+
   function generateProfile() {
     fetch('/generate_profile')
       .then(res => res.json())
@@ -579,18 +654,29 @@
         const card = document.getElementById('profileCard');
         card.style.display = 'block';
         document.getElementById('sportRec').textContent = data.sport;
+        document.getElementById('positionRec').textContent = data.position;
+        document.getElementById('archetypeName').textContent = data.archetype;
+        document.getElementById('archetypeDesc').textContent = data.archetype_desc;
         document.getElementById('traits').innerHTML = data.skills.map(s => `<span class="trait-tag">${s}</span>`).join('');
         document.getElementById('runStat').textContent = data.run_stat;
         document.getElementById('jumpStat').textContent = Number(data.jump_stat).toFixed(1);
         document.getElementById('kneeStat').textContent = data.knee_stat;
         document.getElementById('pushupStat').textContent = data.pushup_stat;
         document.getElementById('plankStat').textContent = data.plank_stat;
-        
+
+        const pctl = data.percentiles || {};
+        setPercentileText('runPctl', pctl.running_spot_percentile);
+        setPercentileText('kneePctl', pctl.high_knees_percentile);
+        setPercentileText('jumpPctl', pctl.jump_percentile);
+        setPercentileText('pushupPctl', pctl.pushup_percentile);
+        setPercentileText('plankPctl', pctl.plank_percentile);
+
         buildRadarChart({
           run: data.run_stat, jump: data.jump_score, knees: data.knee_stat,
           pushup: data.pushup_stat, plank: data.plank_stat,
         });
-        
+
+        document.title = `CombineAI Scout Report — ${data.sport}`;
         card.scrollIntoView({behavior: 'smooth', block: 'start'});
       }).catch(err => console.error("Error generating profile:", err));
   }
@@ -858,6 +944,22 @@
       });
   }
 
+  // Some feedback strings embed a live-changing number (e.g. "...9.3s" or
+  // "...23 cm") that ticks every poll even when nothing meaningful changed.
+  // Stripping digits gives a stable key for log/speech de-duplication while
+  // the original text is still what actually gets shown/spoken.
+  function normalizeFeedbackKey(text) {
+    return text.replace(/[\d.]+/g, '#').trim();
+  }
+
+  function speakFeedback(text) {
+    if (!speechEnabled || !('speechSynthesis' in window) || !text) return;
+    window.speechSynthesis.cancel(); // interrupt any stale utterance so speech stays current
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    window.speechSynthesis.speak(utterance);
+  }
+
   // Shared renderer for both live polling and replay-timeline playback:
   // HUD counters, feedback banner, form log, gauges and distance/jump meters.
   function renderTelemetry(data) {
@@ -871,6 +973,7 @@
 
     // Central Feedback Overlay Routing
     const feedbackText = data.feedback || '';
+    const feedbackKey = normalizeFeedbackKey(feedbackText);
     const isSystemAlert = /step back|make sure|baseline|flight phase|landing registered|reset and hold|done|waiting|ready/i.test(feedbackText);
     const isFormCoaching = /optimize|maintain|increase|incomplete|engage|eccentric|lumbar|concentric|control|pelvic|isometric|stride|triple-flexion/i.test(feedbackText);
     const fbEl = document.getElementById('hudFeedback');
@@ -878,20 +981,28 @@
     if (isSystemAlert && feedbackText !== "") {
       fbEl.innerHTML = `<span>${feedbackText}</span>`;
       fbEl.className = "hud hud-bottom warn";
+      if (feedbackKey !== lastSystemAlertKey) {
+        lastSystemAlertKey = feedbackKey;
+        speakFeedback(feedbackText);
+      }
     } else {
       fbEl.innerHTML = "";
       fbEl.className = "hud hud-bottom";
     }
 
     // Form Log Scroll Update
-    if (feedbackText && feedbackText !== lastFeedbackStr && isFormCoaching && !isSystemAlert) {
-      lastFeedbackStr = feedbackText;
+    if (feedbackText && feedbackKey !== lastFeedbackStr && isFormCoaching && !isSystemAlert) {
+      lastFeedbackStr = feedbackKey;
+      speakFeedback(feedbackText);
       const logBox = document.getElementById('formLog');
 
       if (logBox.querySelector('.empty-log-state')) { logBox.innerHTML = ''; }
 
       const timestamp = typeof data.time_remaining === 'number' ? data.time_remaining.toFixed(1) + 's' : 'Live';
       const isNegativeForm = /warning|incomplete|avoid|loss|sagging/i.test(feedbackText);
+      const thumbHtml = (isNegativeForm && data.mistake_frame)
+        ? `<img class="log-frame-thumb" src="${data.mistake_frame}" alt="Frame showing the form issue">`
+        : '';
 
       const logRow = document.createElement('div');
       logRow.className = `log-item ${isNegativeForm ? '' : 'good'}`;
@@ -900,6 +1011,7 @@
           <span class="log-time">[T-${timestamp}]</span>
           <span>${feedbackText}</span>
         </div>
+        ${thumbHtml}
       `;
       logBox.appendChild(logRow);
       logBox.scrollTop = logBox.scrollHeight;

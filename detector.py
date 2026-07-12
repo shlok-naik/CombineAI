@@ -1,3 +1,5 @@
+import base64
+import re
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -652,6 +654,42 @@ def get_video_duration_seconds(path):
     return frame_count / fps
 
 
+# Mirrors the feedback-classification regexes in templates/index.html's
+# renderTelemetry() — a message only counts as a "mistake" worth snapshotting
+# when it's form-coaching (not a system/status message) AND negative.
+_SYSTEM_ALERT_RE = re.compile(
+    r"step back|make sure|baseline|flight phase|landing registered|reset and hold|done|waiting|ready", re.I
+)
+_FORM_COACHING_RE = re.compile(
+    r"optimize|maintain|increase|incomplete|engage|eccentric|lumbar|concentric|control|pelvic|isometric|stride|triple-flexion",
+    re.I,
+)
+_NEGATIVE_FORM_RE = re.compile(r"warning|incomplete|avoid|loss|sagging", re.I)
+
+
+def _is_mistake_feedback(text):
+    """True if a feedback string represents an actual form mistake (as
+    opposed to a status message or positive/neutral coaching feedback)."""
+    if not text:
+        return False
+    if _SYSTEM_ALERT_RE.search(text):
+        return False
+    return bool(_FORM_COACHING_RE.search(text) and _NEGATIVE_FORM_RE.search(text))
+
+
+def _encode_frame_thumbnail(frame, target_width=320, quality=70):
+    """Downscales and JPEG-encodes a frame to a base64 data URI, for
+    embedding a "this is what the mistake looked like" thumbnail directly
+    in the API response — no files written to disk."""
+    h, w = frame.shape[:2]
+    if w > target_width:
+        frame = cv2.resize(frame, (target_width, max(1, int(h * target_width / w))))
+    ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not ok:
+        return None
+    return "data:image/jpeg;base64," + base64.b64encode(buf).decode("ascii")
+
+
 # --- LIVE STATE MANAGER ---
 class LiveState:
     def __init__(self):
@@ -668,6 +706,13 @@ class LiveState:
         self.current_extra = {}
         self.is_done = False
 
+        # Snapshot of the frame at the moment the most recent form mistake
+        # was detected. Delivered to the frontend exactly once (see
+        # snapshot()) so it doesn't get re-transmitted on every poll.
+        self.mistake_frame = None
+        self._mistake_frame_pending = False
+        self._last_mistake_feedback = ""
+
     def ping(self):
         """Acknowledges the frontend is still actively connected."""
         self.last_client_ping = time.time()
@@ -679,8 +724,22 @@ class LiveState:
             self.current_feedback = "System ready. Awaiting manual start."
             self.current_extra = {}
             self.is_done = False
+            self.mistake_frame = None
+            self._mistake_frame_pending = False
+            self._last_mistake_feedback = ""
             factory = TEST_REGISTRY.get(test_name)
             self.active_test = factory() if factory else None
+
+    def capture_mistake_frame(self, frame, feedback):
+        """Records a snapshot of the current frame if `feedback` represents
+        a new, distinct form mistake. Must be called while holding _lock."""
+        if not _is_mistake_feedback(feedback) or feedback == self._last_mistake_feedback:
+            return
+        self._last_mistake_feedback = feedback
+        encoded = _encode_frame_thumbnail(frame)
+        if encoded:
+            self.mistake_frame = encoded
+            self._mistake_frame_pending = True
 
     def start_test(self):
         with self._lock:
@@ -701,8 +760,10 @@ class LiveState:
                 "feedback": self.current_feedback,
                 "done": self.is_done,
                 "started": bool(self.active_test.started) if self.active_test else False,
-                "camera_error": self.camera_error
+                "camera_error": self.camera_error,
+                "mistake_frame": self.mistake_frame if self._mistake_frame_pending else None,
             }
+            self._mistake_frame_pending = False
             payload.update(self.current_extra)
             return payload
 
@@ -758,6 +819,8 @@ def generate_live_stream():
                         frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
                     )
+
+                    live_state.capture_mistake_frame(frame, feedback)
 
             ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not ret:
@@ -842,6 +905,7 @@ def process_video_file(input_path, output_base_path, mode):
 
     timeline = []
     frame_index = 0
+    last_mistake_feedback = ""
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -855,12 +919,17 @@ def process_video_file(input_path, output_base_path, mode):
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb_frame)
 
+            mistake_frame = None
             if results.pose_landmarks:
                 test.process_frame(results.pose_landmarks.landmark, frame.shape)
                 mp_drawing.draw_landmarks(
                     frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                     landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
                 )
+
+                if _is_mistake_feedback(test.feedback) and test.feedback != last_mistake_feedback:
+                    last_mistake_feedback = test.feedback
+                    mistake_frame = _encode_frame_thumbnail(frame)
 
             timeline.append({
                 "t": round(video_time, 2),
@@ -869,6 +938,7 @@ def process_video_file(input_path, output_base_path, mode):
                 "feedback": test.feedback,
                 "done": test.is_done,
                 "started": True,
+                "mistake_frame": mistake_frame,
                 **test.snapshot_extra(),
             })
 
