@@ -11,6 +11,7 @@ from detector import (
     get_required_duration, get_video_duration_seconds,
 )
 from benchmarks import build_profile
+from database import save_athlete, get_athletes, create_tables
 
 app = Flask(__name__)
 
@@ -22,7 +23,7 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'avi', 'webm', 'mkv', 'm4v'}
 def _is_allowed_video(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
-# User stats (Global). 
+# User stats (Global).
 user_stats = {
     "running_spot": {"score": 0, "reps": 0},
     "high_knees": {"score": 0, "reps": 0},
@@ -41,7 +42,7 @@ def index():
 @app.route('/video_feed')
 def video_feed():
     """Streams the OpenCV video feed using multipart replacement."""
-    
+
     # If a feed already exists (e.g. from a page refresh), force it to terminate
     # before spinning up a new one so they don't fight over webcam access.
     if live_state.stream_active:
@@ -50,9 +51,9 @@ def video_feed():
         # Wait up to 2 seconds for the old camera thread to release hardware
         while live_state.stream_active and time.time() - start_wait < 2.0:
             time.sleep(0.1)
-            
+
     return Response(
-        generate_live_stream(), 
+        generate_live_stream(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
@@ -62,10 +63,10 @@ def set_mode():
     """Changes the active fitness test mode."""
     data = request.json or {}
     mode = data.get("mode", "high_knees")
-    
+
     if mode not in TEST_REGISTRY:
         return jsonify({"status": "error", "message": f"Unknown mode '{mode}'"}), 400
-        
+
     live_state.set_test(mode)
     return jsonify({"status": "initialized", "mode": mode})
 
@@ -174,10 +175,11 @@ def live_stats():
 
 @app.route('/save_score', methods=['POST'])
 def save_score():
-    """Commits the current session's score to the local user_stats dictionary.
-    Accepts an optional JSON snapshot (used after an uploaded-video result,
-    which lives client-side rather than in `live_state`); falls back to the
-    live webcam telemetry when no snapshot is provided."""
+    """Commits the current session's score to the local user_stats dictionary,
+    and mirrors it into the athlete database for the scout dashboard. Accepts
+    an optional JSON snapshot (used after an uploaded-video result, which
+    lives client-side rather than in `live_state`); falls back to the live
+    webcam telemetry when no snapshot is provided."""
     posted = request.json or {}
     snap = posted if posted.get("test") else live_state.snapshot()
     test = snap.get("test")
@@ -193,7 +195,44 @@ def save_score():
             "reps": snap.get("reps", 0),
         }
 
-    return jsonify({"status": "saved", "saved_data": user_stats})
+    db_status = _save_athlete_record()
+
+    return jsonify({"status": "saved", "saved_data": user_stats, "database": db_status})
+
+
+def _save_athlete_record():
+    """Persists the current user_stats into the athlete database for the
+    scout dashboard. Best-effort: if the database is unreachable or
+    unconfigured, this logs a warning and returns an error status instead
+    of raising — a DB outage should never break score-saving for the
+    person actually taking the test."""
+    metrics = {
+        "running_spot": user_stats["running_spot"]["score"],
+        "high_knees": user_stats["high_knees"]["score"],
+        "jump": user_stats["jump"]["score"],
+        "pushup": user_stats["pushup"]["score"],
+        "plank": user_stats["plank"]["score"],
+    }
+    jump_cm = user_stats["jump"]["best_cm"]
+    sport = build_profile(metrics, jump_cm)["sport"]
+
+    try:
+        existing = get_athletes()
+        athlete = {
+            "id": len(existing) + 1,
+            "name": f"Athlete {len(existing) + 1}",
+            "sport": sport,
+            "running": metrics["running_spot"],
+            "high_knees": metrics["high_knees"],
+            "jump": jump_cm,
+            "pushups": metrics["pushup"],
+            "plank": metrics["plank"],
+        }
+        save_athlete(athlete)
+        return {"status": "saved", "total": len(existing) + 1}
+    except Exception as e:
+        print(f"[database] Could not save athlete record: {e}")
+        return {"status": "unavailable", "message": str(e)}
 
 
 @app.route('/generate_profile', methods=['GET'])
@@ -229,9 +268,35 @@ def generate_profile():
     })
 
 
+@app.route('/scout')
+def scout():
+    """Serves the scout dashboard — search/filter/sort saved athletes."""
+    return render_template('scout.html')
+
+
+@app.route('/athletes')
+def athletes_api():
+    """Returns all saved athlete records for the scout dashboard. Returns an
+    empty list (rather than a 500) if the database is unreachable, so the
+    dashboard can show a clean empty state instead of an error page."""
+    try:
+        return jsonify(get_athletes())
+    except Exception as e:
+        print(f"[database] Could not fetch athletes: {e}")
+        return jsonify([])
+
+
 if __name__ == '__main__':
     # Initial setup
     live_state.set_test("running_spot")
+
+    # Best-effort: the app (webcam/upload/scoring) should still run even if
+    # the athlete database is unreachable or not yet configured — only the
+    # scout dashboard's save/search features would be degraded.
+    try:
+        create_tables()
+    except Exception as e:
+        print(f"[database] Could not connect/initialize database — scout dashboard will be unavailable: {e}")
 
     HOST = '127.0.0.1'
     PORT = 5001

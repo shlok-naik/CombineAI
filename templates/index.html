@@ -59,6 +59,11 @@
   .brand .accent { color: var(--amber); }
   .brand-mark { color: var(--cyan); margin-right: 6px; }
   .tagline { color: var(--muted); font-size: 14px; }
+  .scout-btn {
+    margin-left: auto; background: var(--amber); color: #1a1204; text-decoration: none;
+    padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 13px; transition: filter 0.15s ease;
+  }
+  .scout-btn:hover { filter: brightness(1.08); }
 
   /* Layout */
   .layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start; }
@@ -271,6 +276,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark">&#9670;</span>Combine<span class="accent">AI</span></div>
       <div class="tagline">Use your physical performance to create a professional sports profile using AI</div>
+      <a href="/scout" class="scout-btn">🏟 Scout Dashboard</a>
     </header>
 
     <main class="layout">
