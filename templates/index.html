@@ -34,6 +34,32 @@
 
   .app{ max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
 
+  .ticker{
+    position: relative; overflow: hidden; width: 100%;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 999px;
+    margin-bottom: 20px; padding: 10px 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .ticker-track{
+    display: flex; width: max-content;
+    animation: ticker-scroll 26s linear infinite;
+  }
+  .ticker-track:hover{ animation-play-state: paused; }
+  .ticker-item{
+    display: flex; align-items: center; gap: 10px;
+    font-family:'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.5px;
+    color: var(--cyan); text-transform: uppercase; white-space: nowrap; padding: 0 22px;
+  }
+  .ticker-item .dot{ width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+  @keyframes ticker-scroll{
+    from{ transform: translateX(0); }
+    to{ transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{ animation: none; }
+  }
+
   .topbar{ display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom: 28px; }
   .brand{ font-family:'Oswald', sans-serif; font-weight:700; font-size:28px; letter-spacing:0.5px; text-transform: uppercase; }
   .brand .accent{ color: var(--amber); }
@@ -141,10 +167,50 @@
   .stat-box .num{ font-family:'JetBrains Mono', monospace; font-size: 22px; color: var(--text); }
   .stat-box .lbl{ font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
   .report-footnote{ font-size: 11px; color: var(--muted); margin-top: 18px; }
+
+  .radar-wrap{ display:flex; justify-content:center; margin: 4px 0 22px; }
+  .radar-wrap svg{ width: 260px; height: 260px; overflow: visible; }
+  .radar-ring{ fill:none; stroke: var(--panel-border); stroke-width: 1; }
+  .radar-axis{ stroke: var(--panel-border); stroke-width: 1; }
+  .radar-fill{ fill: var(--cyan); fill-opacity: 0.25; stroke: var(--cyan); stroke-width: 2; }
+  .radar-label{ font-family:'JetBrains Mono', monospace; font-size: 9px; fill: var(--muted); }
+
+  .improve-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  .improve-card{ background: var(--bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px; }
+  .improve-card h3{
+    font-family:'Oswald', sans-serif; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 0 0 8px; color: var(--text);
+  }
+  .improve-svg{ width: 100%; height: 56px; display:block; }
+  .improve-axis{ stroke: var(--panel-border); stroke-width: 1; }
+  .improve-line{ fill:none; stroke: var(--cyan); stroke-width: 2; }
+  .improve-dot{ fill: var(--cyan); }
+  .improve-dot-last{ fill: var(--amber); }
+  .improve-empty{ font-size: 11px; color: var(--muted); padding: 18px 0; text-align:center; }
+  .improve-stats{
+    display:flex; justify-content: space-between; margin-top: 8px;
+    font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+  .improve-stats b{ color: var(--text); }
 </style>
 </head>
 <body>
   <div class="app">
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span class="ticker-item"><span class="dot"></span>Detailed Analysis</span>
+        <span class="ticker-item"><span class="dot"></span>Form-First Scoring</span>
+        <span class="ticker-item"><span class="dot"></span>Real-Time Joint Tracking</span>
+        <span class="ticker-item"><span class="dot"></span>Vision-Based Combine</span>
+        <span class="ticker-item"><span class="dot"></span>Instant Scout Reports</span>
+        <span class="ticker-item"><span class="dot"></span>Detailed Analysis</span>
+        <span class="ticker-item"><span class="dot"></span>Form-First Scoring</span>
+        <span class="ticker-item"><span class="dot"></span>Real-Time Joint Tracking</span>
+        <span class="ticker-item"><span class="dot"></span>Vision-Based Combine</span>
+        <span class="ticker-item"><span class="dot"></span>Instant Scout Reports</span>
+      </div>
+    </div>
+
     <header class="topbar">
       <div class="brand"><span class="brand-mark">&#9670;</span>Combine<span class="accent">AI</span></div>
       <div class="tagline">Vision-based scouting combine — form-first scoring from joint angles and movement distance, not just rep count</div>
@@ -224,6 +290,7 @@
       <h2>Official Scout Report</h2>
       <div class="sport" id="sportRec"></div>
       <div class="traits" id="traits"></div>
+      <div class="radar-wrap"><svg id="radarSvg" viewBox="0 0 240 240"></svg></div>
       <div class="stat-row">
         <div class="stat-box"><div class="num" id="runStat">0</div><div class="lbl">Running Form /100</div></div>
         <div class="stat-box"><div class="num" id="jumpStat">0</div><div class="lbl">Best Jump (cm)</div></div>
@@ -232,6 +299,17 @@
         <div class="stat-box"><div class="num" id="plankStat">0</div><div class="lbl">Plank /100</div></div>
       </div>
       <p class="report-footnote">Screenshot this and send it to your coach.</p>
+    </section>
+
+    <section class="report" id="improvementSection" style="display:block;">
+      <h2>Improvement</h2>
+      <p class="report-footnote" style="margin: 0 0 16px;">
+        Session history is saved in this browser — press "Save Score" after each attempt to track progress over time.
+      </p>
+      <div class="improve-grid" id="improveGrid"><!-- populated by JS --></div>
+      <div class="actions" style="max-width: 200px; margin-top: 16px;">
+        <button class="btn-secondary" onclick="clearHistory()">Clear History</button>
+      </div>
     </section>
   </div>
 
@@ -343,10 +421,126 @@
       });
   }
 
+  // --- Radar chart (Scout Report) ---
+  const RADAR_AXES = [
+    { key: 'run', label: 'RUNNING' },
+    { key: 'jump', label: 'JUMP' },
+    { key: 'knees', label: 'HIGH KNEES' },
+    { key: 'pushup', label: 'PUSH-UPS' },
+    { key: 'plank', label: 'PLANK' },
+  ];
+
+  function polarPoint(index, radius, cx, cy) {
+    const angle = (index * 72 - 90) * Math.PI / 180;
+    return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
+  }
+
+  function buildRadarChart(values) {
+    const cx = 120, cy = 120, maxR = 88;
+    let rings = '';
+    [0.25, 0.5, 0.75, 1.0].forEach(frac => {
+      const pts = RADAR_AXES.map((_, i) => polarPoint(i, maxR * frac, cx, cy).join(',')).join(' ');
+      rings += `<polygon points="${pts}" class="radar-ring"></polygon>`;
+    });
+    let axes = '';
+    RADAR_AXES.forEach((_, i) => {
+      const [x, y] = polarPoint(i, maxR, cx, cy);
+      axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="radar-axis"></line>`;
+    });
+    const dataPts = RADAR_AXES.map((ax, i) => {
+      const v = Math.max(0, Math.min(100, values[ax.key] || 0));
+      return polarPoint(i, maxR * (v / 100), cx, cy).join(',');
+    }).join(' ');
+    const dataPolygon = `<polygon points="${dataPts}" class="radar-fill"></polygon>`;
+    let labels = '';
+    RADAR_AXES.forEach((ax, i) => {
+      const [x, y] = polarPoint(i, maxR + 20, cx, cy);
+      labels += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="radar-label">${ax.label}</text>`;
+    });
+    document.getElementById('radarSvg').innerHTML = rings + axes + dataPolygon + labels;
+  }
+
+  // --- Session history (localStorage) + Improvement charts ---
+  const HISTORY_KEY = 'combineAI_sessionHistory_v1';
+  const EVENT_ORDER = ["running_spot", "jump", "high_knees", "pushup", "plank"];
+  const EVENT_LABELS = {
+    running_spot: "Running", jump: "Vertical Jump", high_knees: "High Knees",
+    pushup: "Push-Ups", plank: "Plank Hold",
+  };
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveHistory(hist) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); } catch (e) { /* storage unavailable */ }
+  }
+
+  function appendSessionRecord(test, entry) {
+    const hist = loadHistory();
+    if (!hist[test]) hist[test] = [];
+    hist[test].push({ t: Date.now(), score: entry.score || 0 });
+    if (hist[test].length > 30) hist[test] = hist[test].slice(-30);
+    saveHistory(hist);
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY);
+    renderImprovementCharts();
+    document.getElementById('systemStatus').textContent = "History cleared.";
+  }
+
+  function buildSparkline(history) {
+    const w = 200, h = 56, pad = 6;
+    if (!history || history.length === 0) {
+      return `<div class="improve-empty">No sessions saved yet</div>`;
+    }
+    const n = history.length;
+    const pts = history.map((entry, i) => {
+      const x = n === 1 ? w / 2 : pad + i * (w - 2 * pad) / (n - 1);
+      const y = h - pad - (Math.max(0, Math.min(100, entry.score)) / 100) * (h - 2 * pad);
+      return [x, y];
+    });
+    const polyPoints = pts.map(p => p.join(',')).join(' ');
+    const dots = pts.map(([x, y], i) =>
+      `<circle cx="${x}" cy="${y}" r="${i === n - 1 ? 3 : 2}" class="${i === n - 1 ? 'improve-dot-last' : 'improve-dot'}"></circle>`
+    ).join('');
+    return `<svg viewBox="0 0 ${w} ${h}" class="improve-svg" preserveAspectRatio="none">
+      <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" class="improve-axis"></line>
+      <polyline points="${polyPoints}" class="improve-line"></polyline>
+      ${dots}
+    </svg>`;
+  }
+
+  function renderImprovementCharts() {
+    const hist = loadHistory();
+    const grid = document.getElementById('improveGrid');
+    grid.innerHTML = EVENT_ORDER.map(key => {
+      const entries = hist[key] || [];
+      const latest = entries.length ? Math.round(entries[entries.length - 1].score) : 0;
+      const best = entries.length ? Math.round(Math.max(...entries.map(e => e.score))) : 0;
+      return `<div class="improve-card">
+        <h3>${EVENT_LABELS[key]}</h3>
+        ${buildSparkline(entries)}
+        <div class="improve-stats"><span>Latest: <b>${latest}</b></span><span>Best: <b>${best}</b></span></div>
+      </div>`;
+    }).join('');
+  }
+
   function saveCurrentScore() {
     fetch('/save_score', { method: 'POST' })
       .then(res => res.json())
-      .then(() => { document.getElementById('systemStatus').textContent = "Score saved."; });
+      .then(data => {
+        document.getElementById('systemStatus').textContent = "Score saved.";
+        const entry = data.saved_data && data.saved_data[currentMode];
+        if (entry) {
+          appendSessionRecord(currentMode, entry);
+          renderImprovementCharts();
+        }
+      });
   }
 
   function generateProfile() {
@@ -362,9 +556,15 @@
         document.getElementById('kneeStat').textContent = data.knee_stat;
         document.getElementById('pushupStat').textContent = data.pushup_stat;
         document.getElementById('plankStat').textContent = data.plank_stat;
+        buildRadarChart({
+          run: data.run_stat, jump: data.jump_score, knees: data.knee_stat,
+          pushup: data.pushup_stat, plank: data.plank_stat,
+        });
         document.getElementById('profileCard').scrollIntoView({behavior: 'smooth', block: 'start'});
       });
   }
+
+  renderImprovementCharts();
 
   function poll() {
     fetch('/live_stats').then(res => res.json()).then(data => {
